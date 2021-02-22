@@ -36,6 +36,10 @@
     <Compile Include="project_tree.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="hg-config.xsd" />
+    <Content Include="default-hg-config.xml" />
+  </ItemGroup>
+  <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.9" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

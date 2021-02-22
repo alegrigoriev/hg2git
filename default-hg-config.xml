@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Projects xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation=". hg-config.xsd">
+	<Default>
+		<!-- These are all default settings -->
+		<Vars>
+			<Branches>refs/heads/</Branches>
+			<Tags>refs/tags/</Tags>
+		</Vars>
+		<!--
+		Replace specification is applied to the path to replace
+		names not allowed for refs. The following characters,
+		though some of them legal in file names, are not allowed:
+		
+			Non-printable characters, space ' ', asterisk '*' , colon ':',
+			question mark '?', left bracket '[', backslash '\',
+			circumflex '^', tilde '~', and also '@{' sequence.
+		
+		Note that in XML, you don't need to escape a backslash,
+		but need to escape some other special characters
+		Replace specifications are applied in order of their appearance.
+		
+		Note that file pathnames are not affected by the
+		ref replacement.
+		
+		You may need custom replacement specifications
+		if default replacements create ambiguity (duplicating names).
+		-->
+		<!--<Replace>
+			<Chars>path with spaces</Chars>
+			<With>path_without_spaces</With>
+		</Replace>-->
+		<Replace>
+			<!--
+			This will replace spaces in the ref names
+			with underscores
+			-->
+			<Chars> </Chars>
+			<With>_</With>
+		</Replace>
+		<Replace>
+			<Chars>:</Chars>
+			<With>.</With>
+		</Replace>
+		<Replace>
+			<Chars>^</Chars>
+			<With>+</With>
+		</Replace>
+	</Default>
+	<Project Name="*" Branch="*">
+		<!--
+		The default mappings are applied after non-default, for the given path.
+		The default replacements are applied after non-default, for the given path.
+		-->
+		<!-- These are default mappings.
+		An asterisk matches any path component (a string without path separator '/')
+		A double asterisk matches any number of path components -
+		any string with any number of path separators.
+		$n are replacement strings, for the corresponding wildcards.
+		-->
+		<MapBranch>
+			<!--
+			"<branch>" will map to ref: "refs/heads/<branch>"
+			-->
+			<Branch>**</Branch>
+			<Refname>${Branches}${1}</Refname>
+		</MapBranch>
+		<MapTag>
+			<!--
+			"<tag>" will map to ref: "refs/tags/<tag>"
+			-->
+			<Tag>**</Tag>
+			<Refname>${Tags}${1}</Refname>
+		</MapTag>
+	</Project>
+</Projects>
