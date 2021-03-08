@@ -580,3 +580,22 @@ same as Git does when `user.email` setting is not configured.
 In a Mercurial repository, changesets (commits) may come with author name and email
 combined into the changeset username, and even put in quotes sometimes.
 The program parses the usernames, making an effort to separate the name and email.
+
+Performance optimizations
+--------------------------
+
+To speed up the conversion, the program employs parallel processing, where appropriate.
+
+First of all, current implementation of Python interpreter doesn't take full advantage of multiple threads,
+because it uses the infamous Global Interpreter Lock (GIL). Only one thread interprets the bytecode at any time.
+
+Yet, some functions, such as SHA1 calculations, can release the GIL temporarily and run truly in parallel with other threads.
+Also, it can spawn other processes, such as Git, which will be also running in parallel.
+Some Git operations, though, may have constraints on parallel operations.
+
+The main thread reads the revisions from the repository and reconstructs the revision history into trees.
+Necessary Git hashing operations are queued.
+The program runs `git hash-object` operations by spawning up to 8 instances of Git.
+
+Note that identical blobs introduced by different revisions are only run through `hash-object` once.
+If different branches or revisions introduce same file contents, it doesn't add extra hashing overhead.

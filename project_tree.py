@@ -824,7 +824,7 @@ class project_branch:
 		return 0o100644
 
 	def hash_object(self, data, path, git_env):
-		return self.git_repo.hash_object(data, path, env=git_env)
+		return self.git_repo.hash_object_async(data, path, env=git_env)
 
 	def preprocess_blob_object(self, obj, path):
 		proj_tree = self.proj_tree
@@ -982,6 +982,7 @@ class project_history_tree(history_reader):
 		return
 
 	def shutdown(self):
+		self.git_repo.shutdown()
 		shutil.rmtree(self.git_working_directory, ignore_errors=True)
 		self.git_working_directory = None
 		return
