@@ -1303,6 +1303,7 @@ class project_history_tree(history_reader):
 		# (name, email) are stored as tuple in the dictionary
 		# Missing names are also added to the dictionary as <name>@localhost
 		self.authors_map = {}
+		self.unmapped_authors = []
 		# This is list of project configurations in order of their declaration
 		self.project_cfgs_list = project_config.project_config.make_config_list(options.config,
 											getattr(options, 'project_filter', []),
@@ -1868,6 +1869,8 @@ class project_history_tree(history_reader):
 		if author_info is not None:
 			return author_info
 
+		self.unmapped_authors.append(author)
+
 		# Try to remove the enclosing quotes
 		if m := re.fullmatch('"([^"]+)"', author):
 			name = m[1]
@@ -1878,6 +1881,27 @@ class project_history_tree(history_reader):
 
 		self.authors_map[author] = author_info
 		return author_info
+
+	def print_unmapped_authors(self, fd):
+		if len(self.unmapped_authors):
+			print("Unmapped usernames:", file=fd)
+			for name in sorted(self.unmapped_authors):
+				print(name, file=fd)
+		return
+
+	def make_authors_file(self, filename):
+		authors = {}
+		for name in sorted(self.authors_map):
+			author_info = self.authors_map[name]
+			d = {
+				"Name" : author_info.author,
+				"Email" : author_info.email,
+				}
+			authors[name] = d
+
+		with open(filename, 'wt', encoding='utf=8') as fd:
+			json.dump(authors, fd, ensure_ascii=False, indent='\t')
+		return
 
 def print_stats(fd):
 	git_repo.print_stats(fd)
