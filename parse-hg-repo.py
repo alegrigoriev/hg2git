@@ -56,12 +56,13 @@ def main():
 	options.log_revs = 'revs' in options.verbose or 'all' in options.verbose
 
 	from hg_reader import hg_repository_reader, print_stats as print_hg_stats
-	from history_reader import history_reader
+	from project_tree import project_history_tree
 
-	history = history_reader(options)
+	project_tree = project_history_tree(options)
 
 	try:
-		history.load(hg_repository_reader(options.in_repository))
+		project_tree.load(hg_repository_reader(options.in_repository))
+
 	finally:
 		print_hg_stats(log_file)
 		log_file.close()
