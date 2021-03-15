@@ -24,16 +24,28 @@ import os
 os.environ["HGENCODING"] = "UTF-8"
 
 def main():
-	in_repository = sys.argv[1]
+	import argparse
+	parser = argparse.ArgumentParser(description="Parse Mercurial repository", allow_abbrev=False)
+	parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+	parser.add_argument(dest='in_repository', help="Mercurial repository root directory")
+	parser.add_argument("--log", dest='log_file', help="Logfile destination; default to stdout")
+
+	options = parser.parse_args();
+
+	if options.log_file:
+		options.log_file = open(options.log_file, 'wt', 0x100000, encoding='utf=8')
+	else:
+		options.log_file = sys.stdout
+	log_file = options.log_file
 
 	from hg_reader import hg_repository_reader, print_stats as print_hg_stats
 	from history_reader import load_history
 
 	try:
-		load_history(hg_repository_reader(in_repository), sys.stdout)
-
+		load_history(hg_repository_reader(options.in_repository), options)
 	finally:
-		print_hg_stats(sys.stdout)
+		print_hg_stats(log_file)
+		log_file.close()
 
 	return 0
 

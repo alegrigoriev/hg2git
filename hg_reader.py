@@ -205,7 +205,7 @@ class hg_repository_reader:
 		self.changectx_dict = {}
 		return
 
-	def read_revisions(self):
+	def read_revisions(self, options):
 		rev = 0
 		pending_changectx_dict = {}
 		changes_array = [None] * len(self.repository.changelog)
