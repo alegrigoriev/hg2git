@@ -53,10 +53,12 @@ def main():
 	options.log_dump = 'dump' in options.verbose
 
 	from hg_reader import hg_repository_reader, print_stats as print_hg_stats
-	from history_reader import load_history
+	from history_reader import history_reader
+
+	history = history_reader(options)
 
 	try:
-		load_history(hg_repository_reader(options.in_repository), options)
+		history.load(hg_repository_reader(options.in_repository))
 	finally:
 		print_hg_stats(log_file)
 		log_file.close()
