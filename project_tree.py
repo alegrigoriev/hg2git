@@ -1286,6 +1286,7 @@ class project_history_tree(history_reader):
 
 		# This is a tree of branches
 		self.head_branch = None
+		self.unmapped_branches = {}
 		# class path_tree iterates in the tree recursion order: from root to branches
 		# branches_list will iterate in order in which the branches are created
 		self.branches_list = []
@@ -1373,6 +1374,10 @@ class project_history_tree(history_reader):
 		return
 
 	def get_branch_map(self, name):
+		mapped = self.unmapped_branches.get(name, None)
+		if mapped is not None:
+			return None
+
 		for cfg in self.project_cfgs_list:
 			branch_map = cfg.map_branch(name)
 			if branch_map is None:
@@ -1385,6 +1390,7 @@ class project_history_tree(history_reader):
 								% (name, branch_map.globspec, cfg.name),
 							'         Blocked from creating a branch',
 							file=self.log_file)
+				self.unmapped_branches[name] = False
 				break
 
 			branch_map.cfg = cfg
@@ -1395,6 +1401,8 @@ class project_history_tree(history_reader):
 			# checked for mapping
 			print('Branch mapping: No map for "%s" to create a Git branch' % name, file=self.log_file)
 
+		# Save the unmapped directory
+		self.unmapped_branches[name] = True
 		return None
 
 	## Adds a new branch for name in this revision, possibly with source revision
@@ -1757,6 +1765,8 @@ class project_history_tree(history_reader):
 			self.print_progress_message("done")
 			self.print_final_progress_line()
 
+			self.print_unmapped_branches(self.log_file)
+
 		finally:
 			self.shutdown()
 
@@ -1819,6 +1829,16 @@ class project_history_tree(history_reader):
 			rev_info.branch.finalize_deleted(rev_info.rev,
 							rev_info.prev_rev.commit)
 			continue
+
+		return
+
+	def print_unmapped_branches(self, fd):
+		unmapped = sorted(branch for branch, mapped in self.unmapped_branches.items() if mapped)
+
+		if unmapped:
+			print("Unmapped branches:", file=fd)
+			for branch in unmapped:
+				print(branch, file=fd)
 
 		return
 

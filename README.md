@@ -328,6 +328,10 @@ An optional `<RevisionRef>` specification defines how the revision ref name root
 Without `<RevisionRef>` specification, an implicit mapping will make
 refnames for branches (Git ref matching `refs/heads/<branch name>`) as `refs/revisions/<branch name>/r<rev number>`.
 
+Some Mercurial branches may not match any of the `<MapBranch>` directive,
+and thus remain not mapped to any Git branch.
+The program prints list of these branches to the log file.
+
 Tag to Ref mapping{#tag-mapping}
 -------------------
 
