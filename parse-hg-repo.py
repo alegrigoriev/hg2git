@@ -66,6 +66,7 @@ def main():
 	return 0
 
 from mercurial.error import RepoError
+from exceptions import Exception_history_parse
 if __name__ == "__main__":
 	try:
 		sys.exit(main())
@@ -75,6 +76,9 @@ if __name__ == "__main__":
 	except FileNotFoundError as fnf:
 		print("ERROR: %s: %s" % (fnf.strerror, fnf.filename), file=sys.stderr)
 		sys.exit(1)
+	except Exception_history_parse as ex:
+		print("ERROR: %s" % ex.strerror, file=sys.stderr)
+		sys.exit(128)
 	except KeyboardInterrupt:
 		# silent abort
 		sys.exit(130)

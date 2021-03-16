@@ -27,6 +27,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="exceptions.py" />
     <Compile Include="history_reader.py" />
     <Compile Include="lookup_tree.py" />
     <Compile Include="parse-hg-repo.py" />
