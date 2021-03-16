@@ -769,6 +769,8 @@ class project_branch:
 					env=self.git_env)
 
 			print("COMMIT:%s REF:%s BRANCH:%s;%s" % (commit, self.refname, self.name, rev_info.rev), file=rev_info.log_file)
+			if self.proj_tree.log_commits:
+				print(self.git_repo.show(commit, "--raw", "--parents", "--no-decorate", "--abbrev-commit"), file=rev_info.log_file)
 
 			# Make a ref for this revision in refs/revisions namespace
 			if self.revisions_ref:
@@ -947,6 +949,8 @@ class project_history_tree(history_reader):
 
 		self.options = options
 		self.log_file = options.log_file
+		self.log_commits = getattr(options, 'log_commits', False)
+
 		# This is a tree of branches
 		self.head_branch = None
 		# class path_tree iterates in the tree recursion order: from root to branches

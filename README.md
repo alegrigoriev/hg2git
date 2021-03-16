@@ -48,7 +48,7 @@ This value is also assigned to **$Tags** variable to use for substitutions in th
 `--no-default-config`
 - don't use default namespaces for branches and tags. This option doesn't affect default variable assignments.
 
-`--verbose={dump|revs|all|dump_all}`
+`--verbose={dump|revs|commits|all|dump_all}`
 - dump additional information to the log file.
 
 	`--verbose=dump`
@@ -61,8 +61,11 @@ This doesn't include file diffs.
 	- dump all revisions, even empty revisions without any change operations.
 By default, `--verbose=dump` and `--verbose=all` don't dump empty revisions.
 
+	`--verbose=commits` 
+	- issue `git show --raw --parents --no-decorate --abbrev-commit` for each commit made during conversion.
+
 	`--verbose=all`
-	- same as `--verbose=dump --verbose=revs`
+	- same as `--verbose=dump --verbose=revs --verbose=commits`
 
 `--project <project name filter>`
 - selects projects to process. This option can appear multiple times. See [Project filtering](#project-filtering).
