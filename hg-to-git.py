@@ -53,6 +53,7 @@ def main():
 					action='store_true')
 	parser.add_argument("--authors-map", '-A', dest='authors_map', help="JSON file to map Mercurial usernames to Git names and emails")
 	parser.add_argument("--make-authors-map", dest='make_authors', help="Create a JSON template for users file, to be used as --users-map file")
+	parser.add_argument("--append-to-refs", action='append', default=[], metavar='refs/prev-repo-heads-and-tags', help="refs root of previous repository, see README")
 
 	options = parser.parse_args();
 
