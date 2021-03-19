@@ -995,7 +995,7 @@ class project_branch:
 			print('Deleted revision %s on branch "%s" is preserved as refname "%s"'
 				% (rev, self.name, refname), file=log_file)
 		else:
-			print('Deleted revision %s on branch "%s" not mapped to any refname'
+			print('Deleted revision %s on branch "%s" not merged to any path or mapped to refname'
 				% (rev, self.name), file=log_file)
 		return
 
@@ -1564,7 +1564,34 @@ class project_history_tree(history_reader):
 			branch.finalize()
 
 		# Process remaining deleted revisions
+		# Find which deleted revisions are not accessible from any other deleted revision
+		remaining_deleted_revisions = []
+		all_merged_deleted_revisions = {}
 		for rev_info in self.deleted_revs:
+			merged_at_rev = rev_info.prev_rev.get_revision_merged_at(all_merged_revisions)
+			if merged_at_rev is not None:
+				if merged_at_rev.branch is rev_info.branch:
+					# Silently delete the revision because the branch is either empty
+					# or merged back to same branch
+					continue
+				print('Deleted revision %s on branch "%s" has been merged to branch "%s" at rev %s'
+					% (rev_info.rev, rev_info.branch.name, merged_at_rev.branch.name, merged_at_rev.rev),
+					file=self.log_file)
+				continue
+			rev_info.prev_rev.export_merged_revisions(all_merged_deleted_revisions)
+			remaining_deleted_revisions.append(rev_info)
+
+		for rev_info in remaining_deleted_revisions:
+			merged_at_rev = rev_info.prev_rev.get_revision_merged_at(all_merged_deleted_revisions)
+			if merged_at_rev is not None:
+				if merged_at_rev.branch is rev_info.branch:
+					# Silently delete the revision because the deleted revision is either empty
+					# or merged back to same branch
+					continue
+				print('Deleted revision %s on branch "%s" has been merged to branch "%s" at rev %s'
+					% (rev_info.rev, rev_info.branch.name, merged_at_rev.branch.name, merged_at_rev.rev),
+					file=self.log_file)
+				continue
 
 			rev_info.branch.finalize_deleted(rev_info.rev,
 							rev_info.prev_rev.commit)

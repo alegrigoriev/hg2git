@@ -508,7 +508,8 @@ Handling of deleted branches
 
 In Mercurial, a branch can be deleted, terminating its history.
 
-**hg-to-git** program handles these cases by assigning a ref with `_deleted@r<rev>` suffix.
+**hg-to-git** program handles these cases by assigning a ref with `_deleted@r<rev>` suffix,
+but only if that point haven't been merged into another branch.
 You can drop these refs, using `MapRef` specifications.
 
 Automatic deletion of merged branches
