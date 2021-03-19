@@ -681,6 +681,32 @@ The user needs to review the resulting file and make necessary correction in fut
 or by manually injecting the correct file at the appropriate revisions,
 by using `<AddFile>` directives in the configuration file.
 
+Ignoring files from Mercurial revision tree
+----------------------------
+
+Quite often, when a repository haven't been properly setup to ignore temporary files and build artifacts,
+those files get committed by mistake. During Mercurial to Git conversion,
+the program can ignore those files and drop them from the resulting Git commits.
+
+To ignore files, use `<IgnoreFiles>` directive in `<Default>` or `<Project>` section:
+
+```xml
+	<Project>
+		<IgnoreFiles>glob pattern....</IgnoreFiles>
+	</Project>
+```
+
+The directive contains a semicolon-separated list of pathname patterns to ignore.
+Multiple `<IgnoreFiles>` directives can be present.
+
+If a pattern is prefixed with an exclamation mark '`!`',
+it means this pattern is excluded from ignore (negative match).
+
+All `<IgnoreFiles>` definitions from `<Default>` are processed *after* all sections in `<Project>`.
+
+The program matches relative paths (in the branch worktree) against each in sequence, until a match is found.
+If it's a negative match (the pattern is prefixed with '`!`'), the file is not ignored.
+
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
 

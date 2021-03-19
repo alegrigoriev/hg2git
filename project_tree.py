@@ -245,6 +245,9 @@ class project_branch_rev:
 			obj2 = t[1]
 			obj1 = t[2]
 
+			if self.branch.ignore_file(path):
+				continue
+
 			if obj1 is None:
 				# added items
 				if obj2.is_dir():
@@ -619,6 +622,10 @@ class project_branch_rev:
 
 		difflist = []
 		for t in old_tree.compare(new_tree, "", expand_dir_contents=True):
+			path = t[0]
+
+			if branch.ignore_file(path):
+				continue
 
 			difflist.append(t)
 			continue
@@ -1050,6 +1057,9 @@ class project_branch:
 
 		return 0o100644
 
+	def ignore_file(self, path):
+		return self.cfg.ignore_files.match(path)
+
 	def hash_object(self, data, path, git_env):
 		# git_repo.hash_object will use the current environment from rev_info,
 		# to use the proper .gitattributes worktree
@@ -1057,6 +1067,9 @@ class project_branch:
 
 	def preprocess_blob_object(self, obj, path):
 		proj_tree = self.proj_tree
+
+		if self.ignore_file(path):
+			return obj
 
 		if obj.is_symlink():
 			return obj
