@@ -22,6 +22,7 @@ import shutil
 import json
 from types import SimpleNamespace
 import git_repo
+import hashlib
 
 from history_reader import *
 from lookup_tree import *
@@ -130,6 +131,7 @@ class project_branch_rev:
 		self.cherry_pick_revs = []
 		self.props_list = []
 		self.tags = None
+		self.change_id = None
 		return
 
 	def set_revision(self, revision):
@@ -199,8 +201,18 @@ class project_branch_rev:
 	def get_commit_revision_props(self, base_rev):
 		decorate_revision_id=getattr(self.branch.proj_tree.options, 'decorate_revision_id', False)
 		props = self.get_combined_revision_props(base_rev, decorate_revision_id=decorate_revision_id)
-
 		cherry_pick_msg = self.get_cherrypick_str()
+
+		if getattr(self.branch.proj_tree.options, 'decorate_change_id', False):
+			if not self.change_id:
+				h = hashlib.sha1()
+				h.update(self.tree.get_hash())
+				h.update(bytes('COMMIT\n%s %s\n%s'
+					% (str(props.author_info), props.date, "\n\n".join(props.log)), encoding='utf-8'))
+				self.change_id = h.hexdigest()
+
+			props.log.append('Change-Id: I' + self.change_id)
+
 		if cherry_pick_msg:
 			props.log.append(cherry_pick_msg)
 

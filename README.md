@@ -77,9 +77,19 @@ The program will not delete existing refs, only override them as needed.
 
 `--decorate-commit-message <tagline type>`
 - tells the program to add a tagline to each commit message, depending on `<tagline type>`.
-At this time, the only `<tagline type>` supported is `revision-id`,
-which tells the program to add `HG-revision: <rev>` taglines with Mercurial revision number to each commit.
 By default, the commit messages are undecorated.
+
+	`--decorate-commit-message revision-id`
+	- add `HG-revision: <rev>` taglines with Mercurial revision number to each commit.
+This is useful when debugging the conversion configuration, though less so in the
+resulting repository.
+
+	`--decorate-commit-message change-id`
+	- enable insertion of Gerrit `Change-Id:` taglines into commit messages.
+Use this option if you intend to import the generated Git repository into Gerrit code review system.
+Change ID for a commit is generated as SHA1 hash over combination of its parent commit IDs,
+author name, email and timestamp, and the commit message.
+Multiple runs of the program produce identical change IDs.
 
 `--convert-hgignore`
 - convert `.hgignore` files to `.gitignore`. See [.hgignore to .gitignore conversion](#convert-hgignore) for more details.
