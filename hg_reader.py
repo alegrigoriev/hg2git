@@ -103,6 +103,7 @@ class hg_changectx_revision:
 			self.compare_change_contexts(parent_changectx, changectx)
 
 		self.extra = changectx.extra().copy()
+		self.extra.pop(b'branch', None)
 
 		return
 

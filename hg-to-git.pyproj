@@ -32,6 +32,7 @@
     <Compile Include="lookup_tree.py" />
     <Compile Include="parse-hg-repo.py" />
     <Compile Include="hg_reader.py" />
+    <Compile Include="project_config.py" />
     <Compile Include="project_tree.py" />
   </ItemGroup>
   <ItemGroup>
