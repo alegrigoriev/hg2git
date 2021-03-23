@@ -796,6 +796,58 @@ to which this specification applies.
 Only one `<Rev>` or `<RevId>` specification can be present.
 Only one `<FromRev>` or `<FromRevId>` specification can be present.
 
+Changing file mode mask
+-----------------------
+
+Unlike Git, Mercurial doesn't keep Unix file mode.
+To checkout files as executables, they can be assigned `executable` attribute in the repository.
+Though, in mis-configured repositories, this attribute is often given to files not intended to be executable.
+
+The program assigns file mode 100644 to regular files, unless they have `executable` attribute,
+in which case they get file mode 100755.
+
+Symbolic links get file mode 120000.
+
+You can give a different file mode to regular files, or fix misconfigured `executable`,
+by using `<Chmod>` specification under `<Default>` or `<Project>` section.
+
+```xml
+	<Project>
+		<Chmod>
+			<Path>glob pattern...</Path>
+			<Mode>file mode</Mode>
+		</Chmod>
+	</Project>
+```
+
+Here **glob pattern** is a semicolon-separated list of patterns.
+Negative patterns (do not match) should be prefixed with an exclamation mark '`!`'.
+**file mode** is Unix file mode consisting of three octal digits (0-7).
+
+All `<Chmod>` definitions from `<Default>` are processed *after* all sections in `<Project>`.
+
+If a file path matches a pattern in the list, it's committed with the specified mode.
+
+Typically, the following `<Chmod>` specifications need to be used:
+
+```xml
+	<Project>
+		<Chmod>
+			<Path>*.sh;*.pl;*.so;*.exe;*.dll;*.bat;*.cmd;*.EXE;*.DLL;*.BAT;*.CMD</Path>
+			<Mode>755</Mode>
+		</Chmod>
+		<Chmod>
+			<Path>*</Path>
+			<Mode>644</Mode>
+		</Chmod>
+	</Project>
+```
+
+This forces all files with extensions `.sh`, `.pl`, `.exe`, `.dll`, `.bat`, `.cmd`, `.so` to have mode 100755,
+and all other files to have mode 100644.
+`.exe`, `.bat`, `.cmd` and `.dll` files here are forced to mode 100755 (executable),
+because Git under Cygwin will otherwise check them out as non-executable, and then those files won't run.
+
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
 

@@ -1087,6 +1087,10 @@ class project_branch:
 		if obj.is_symlink():
 			return 0o120000
 
+		for (match_list, mode) in self.cfg.chmod_specifications:
+			if match_list.match(path):
+				return 0o100000|mode
+
 		if obj.get_property(b'executable', False):
 			return 0o100755
 
