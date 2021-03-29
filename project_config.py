@@ -868,13 +868,16 @@ class project_config:
 		return merged
 
 	@staticmethod
-	def make_default_config():
+	def make_default_config(options=None):
 		vars_section = '''
-		<Branches>refs/heads/</Branches>
-		<Tags>refs/tags/</Tags>'''
+		<Branches>%s</Branches>
+		<Tags>%s</Tags>''' % (
+				getattr(options, 'branches', 'refs/heads/'),
+				getattr(options, 'tags', 'refs/tags/'))
 
+		if getattr(options, 'use_default_config', True):
 		# By default, 'tip' tag is unmapped
-		default_mappings = '''
+			default_mappings = '''
 	<MapBranch>
 		<Branch>**</Branch>
 		<Refname>${Branches}${1}</Refname>
@@ -887,6 +890,8 @@ class project_config:
 		<Tag>**</Tag>
 		<Refname>${Tags}${1}</Refname>
 	</MapTag>'''
+		else:
+			default_mappings = ''
 
 		default_cfg = """<Default>
 	<Vars>%s

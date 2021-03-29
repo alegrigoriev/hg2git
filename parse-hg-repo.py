@@ -37,6 +37,10 @@ def main():
 	group.add_argument("--progress", nargs='?', help="Forces progress indication when not detected as on terminal, and optionally sets the update period in seconds",
 					type=float, action='store', const='1.', default='1.' if sys.stderr.isatty() else None)
 	parser.add_argument("--config", "-c", help="XML file to configure conversion to Git repository")
+	parser.add_argument("--branches", help="Namespace for branches, default 'refs/heads/'", default='refs/heads/')
+	parser.add_argument("--tags", help="Namespace for tags, default 'refs/tags/'", default='refs/tags/')
+	parser.add_argument("--no-default-config", dest='use_default_config', default=True, action='store_false',
+					help="Don't use default mappings (refs/heads/*, refs/tags/*). The mappings need to be provided in a config file, instead")
 
 	options = parser.parse_args();
 

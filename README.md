@@ -36,6 +36,17 @@ and optionally set the update period in seconds as a floating point number.
 For example, `--progress=0.1` sets the progress update period 100 ms.
 The default update period is 1 second.
 
+`--branches <branches namespace>`
+- use this directory name as the root directory for branches. The default is **refs/heads/**.
+This value is also assigned to **$Branches** variable to use for substitutions in the XML config file.
+
+`--tags <tags namespace>`
+- use this directory name as the root directory for tags. The default is **refs/tags/**.
+This value is also assigned to **$Tags** variable to use for substitutions in the XML config file.
+
+`--no-default-config`
+- don't use default namespaces for branches and tags. This option doesn't affect default variable assignments.
+
 `--verbose={dump|revs|all|dump_all}`
 - dump additional information to the log file.
 
@@ -129,7 +140,8 @@ The following default variables are preset:
 		</Vars>
 ```
 
-They can be overridden explicitly in `<Default>` and `<Project>` sections.
+They can be overridden explicitly in `<Default>` and `<Project>` sections,
+and/or by the command line options `--branches` and `--tags`.
 
 For the variable substitution purposes, the sections are processed in order,
 except for the specifications injected from `<Default>` section into `<Project>`.
@@ -246,7 +258,7 @@ the program tries to map its name into a symbolic reference AKA ref.
 
 `<MapBranch>` definitions are processed in their order in the config file in each `<Project>`.
 First `<Project>` definitions are processed, then definitions from `<Default>`,
-and then default mappings described above.
+and then default mappings described above (unless they are suppressed by `--no-default-config` command line option).
 
 The first `<MapBranch>` with `<Branch>` matching the branch name will define which Git "branch" this directory belongs to.
 
