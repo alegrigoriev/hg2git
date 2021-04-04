@@ -31,6 +31,9 @@ from rev_ranges import *
 import project_config
 import format_files
 
+TOTAL_FILES_REFORMATTED = 0
+TOTAL_BYTES_IN_FILES_REFORMATTED = 0
+
 def parse_name_email(name):
 	if m := re.fullmatch('([^<>]+?) +<([^<>@]+?(?:@| at | AT )[^<>@]+)>', name):
 		name = m[1]
@@ -1191,6 +1194,9 @@ class project_branch:
 				print("WARNING: file %s:\n\t%s" % (path, s), file=log_file)
 				return
 
+			global TOTAL_FILES_REFORMATTED, TOTAL_BYTES_IN_FILES_REFORMATTED
+			TOTAL_FILES_REFORMATTED += 1
+			TOTAL_BYTES_IN_FILES_REFORMATTED += len(data)
 			data = format_files.format_data(data, fmt, error_handler)
 		# git_repo.hash_object will use the current environment from rev_info,
 		# to use the proper .gitattributes worktree
@@ -2189,5 +2195,8 @@ class project_history_tree(history_reader):
 		return
 
 def print_stats(fd):
+	if TOTAL_FILES_REFORMATTED:
+		print("Reformatting: done %d times, %d MiB" % (
+			TOTAL_FILES_REFORMATTED, TOTAL_BYTES_IN_FILES_REFORMATTED//0x100000), file=fd)
 	git_repo.print_stats(fd)
 	return
