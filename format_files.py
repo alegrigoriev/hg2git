@@ -878,6 +878,10 @@ def main():
 
 	return 0
 
+import hashlib
+# SHA1 of this file is used to invalidate SHA1 map file if this file changes
+sha1 = hashlib.sha1(Path(__file__).read_bytes(),usedforsecurity=False).digest()
+
 if sys.version_info < (3, 8):
 	sys.exit("indentation: This package requires Python 3.8+")
 
