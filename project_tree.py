@@ -91,7 +91,7 @@ class project_branch_rev:
 		# Next commit in history
 		self.next_rev = None
 		self.prev_rev = prev_rev
-		# revisions_to_merge is a map of revisions pending to merge, keyed by branch.
+		# revisions_to_merge is a map of revisions pending to merge, keyed by (branch, index_seq).
 		self.revisions_to_merge = None
 		# any_changes_present is set to true if stagelist was not empty
 		self.any_changes_present = False
@@ -102,12 +102,13 @@ class project_branch_rev:
 		else:
 			prev_rev.next_rev = self
 			self.tree:git_tree = prev_rev.tree
-			# merged_revisions is a map of merged revisions keyed by branch.
+			# merged_revisions is a map of merged revisions keyed by (branch, index_seq).
 			# It either refers to the previous revision's map,
 			# or a copy is made and modified
 			# Its values are tuples (merged_revision, revision_merged_at)
 			self.merged_revisions = prev_rev.merged_revisions
 
+		self.index_seq = branch.index_seq
 		# list of rev-info the commit on this revision would depend on - these are parent revs for the rev's commit
 		self.parents = []
 		self.cherry_pick_revs = []
@@ -377,15 +378,16 @@ class project_branch_rev:
 		if self.is_merged_from(add_rev):
 			return
 
+		key = (add_rev.branch, add_rev.index_seq)
 		if self.revisions_to_merge is None:
 			self.revisions_to_merge = {}
 		else:
 			# Check if this revision or its descendant has been added for merge already
-			merged_rev = self.revisions_to_merge.get(add_rev.branch)
+			merged_rev = self.revisions_to_merge.get(key)
 			if merged_rev is not None and merged_rev.rev >= add_rev.rev:
 				return
 
-		self.revisions_to_merge[add_rev.branch] = add_rev
+		self.revisions_to_merge[key] = add_rev
 
 		# Now add previously merged revisions from add_rev to the merged_revisions dictionary
 		for (rev_info, merged_on_rev) in add_rev.merged_revisions.values():
@@ -416,11 +418,14 @@ class project_branch_rev:
 		return
 
 	### Get which revision of the branch of interest have been merged
-	def get_merged_revision(self, rev_info_or_branch):
+	def get_merged_revision(self, rev_info_or_branch, index_seq=None):
+		if index_seq is None:
+			index_seq = rev_info_or_branch.index_seq
+
 		if type(rev_info_or_branch) is project_branch_rev:
 			rev_info_or_branch = rev_info_or_branch.branch
 
-		(merged_rev, merged_at_rev) = self.merged_revisions.get(rev_info_or_branch, (None,None))
+		(merged_rev, merged_at_rev) = self.merged_revisions.get((rev_info_or_branch, index_seq), (None,None))
 		return merged_rev
 
 	def set_merged_revision(self, merged_rev, merged_at_rev=None):
@@ -429,7 +434,7 @@ class project_branch_rev:
 
 		if self.merged_revisions is self.prev_rev.merged_revisions:
 			self.merged_revisions = self.prev_rev.merged_revisions.copy()
-		self.merged_revisions[merged_rev.branch] = (merged_rev, merged_at_rev)
+		self.merged_revisions[(merged_rev.branch, merged_rev.index_seq)] = (merged_rev, merged_at_rev)
 		return
 
 	### Returns True if rev_info_or_branch (if branch, then its HEAD) is one of the ancestors of 'self'.
@@ -437,20 +442,23 @@ class project_branch_rev:
 	# If skip_empty_revs is True, then the revision of interest is considered merged
 	# even if it's a descendant of the merged revision, but there's been no changes
 	# between them
-	def is_merged_from(self, rev_info_or_branch, skip_empty_revs=False):
+	def is_merged_from(self, rev_info_or_branch, index_seq=None, skip_empty_revs=False):
 		if type(rev_info_or_branch) is project_branch:
 			branch = rev_info_or_branch
 			rev_info = branch.HEAD
 		else:
 			branch = rev_info_or_branch.branch
 			rev_info = rev_info_or_branch
+		if index_seq is None:
+			index_seq = rev_info.index_seq
 
-		if branch is self.branch:
+		if branch is self.branch \
+			and index_seq == self.index_seq:
 			# A previous revision of the same sequence of the branch
 			# is considered merged
 			return True
 
-		merged_rev = self.get_merged_revision(branch)
+		merged_rev = self.get_merged_revision(branch, index_seq)
 		if merged_rev is None:
 			return False
 		if skip_empty_revs:
@@ -723,8 +731,9 @@ class project_branch:
 			continue
 
 		# Absolute path to the working directory.
-		# index file (".git.index") will be placed there
+		# index files (".git.index<index_seq>") will be placed there
 		self.git_index_directory = workdir
+		self.index_seq = 0
 		if workdir:
 			workdir.mkdir(parents=True, exist_ok = True)
 
@@ -804,7 +813,7 @@ class project_branch:
 		if self.git_index_directory:
 			return self.git_repo.make_env(
 					work_dir=str(self.git_index_directory),
-					index_file=str(self.git_index_directory.joinpath(".git.index")))
+					index_file=str(self.git_index_directory.joinpath(".git.index" + str(self.index_seq))))
 		return {}
 
 	def set_head_revision(self, revision):
@@ -973,7 +982,53 @@ class project_branch:
 		obj = proj_tree.finalize_object(obj)
 		return obj
 
-	def finalize(self, merged_revs_dict):
+	def finalize_deleted(self, rev, sha1):
+		if not sha1:
+			return
+
+		log_file = self.proj_tree.log_file
+		refname = self.refname
+		if refname:
+			refname = self.update_ref(refname + ('_deleted@r%s' % rev), sha1)
+
+		if refname:
+			print('Deleted revision %s on branch "%s" is preserved as refname "%s"'
+				% (rev, self.name, refname), file=log_file)
+		else:
+			print('Deleted revision %s on branch "%s" not mapped to any refname'
+				% (rev, self.name), file=log_file)
+		return
+
+	def delete(self, revision, quiet=False):
+		if not self.HEAD.tree:
+			# This also will bail out if branch delete happens twice in a revision
+			return
+
+		rev_info = self.stage
+		rev_info.rev = revision.rev
+		rev_info.rev_id = revision.rev_id
+		rev_info.add_revision_props(revision)
+
+		# Set the deleted revision now to propagate it until the branch is reinstated
+		self.set_rev_info(rev_info.rev, rev_info)
+
+		if quiet:
+			print('Branch "%s" merged back to revision %s\n' %
+					(self.name, revision.rev), file=self.proj_tree.log_file)
+		else:
+			print('Branch "%s" deleted at revision %s\n' %
+					(self.name, revision.rev), file=self.proj_tree.log_file)
+			self.proj_tree.deleted_revs.append(rev_info)
+
+		# Start with fresh index
+		self.index_seq += 1
+		self.git_env = self.make_git_env()
+
+		self.init_head_rev()
+
+		return
+
+	def finalize(self):
 
 		sha1 = self.HEAD.commit
 		if not sha1:
@@ -1091,6 +1146,7 @@ class project_history_tree(history_reader):
 		# This path tree is used to detect refname collisions, when a new branch
 		# is created with an already existing ref
 		self.all_refs = path_tree()
+		self.deleted_revs = []
 		# This is list of project configurations in order of their declaration
 		self.project_cfgs_list = project_config.project_config.make_config_list(options.config,
 											getattr(options, 'project_filter', []),
@@ -1336,9 +1392,12 @@ class project_history_tree(history_reader):
 			if delete_rev_id is not None:
 				delete_revision = self.revision_dict.get(delete_rev_id, None)
 				if delete_revision is not None:
-					if delete_revision.branch is branch:
+					delete_branch = delete_revision.branch
+					if delete_branch is branch:
+						delete_branch.delete(self.HEAD())
 						self.head_branch = None
 						return self.empty_tree
+					delete_branch.delete(self.HEAD(), quiet=True)
 			return base_tree
 
 		if node.action == b'tag':
@@ -1502,7 +1561,14 @@ class project_history_tree(history_reader):
 					continue
 
 			# branch.finalize() writes the refs
-			branch.finalize(all_merged_revisions)
+			branch.finalize()
+
+		# Process remaining deleted revisions
+		for rev_info in self.deleted_revs:
+
+			rev_info.branch.finalize_deleted(rev_info.rev,
+							rev_info.prev_rev.commit)
+			continue
 
 		return
 

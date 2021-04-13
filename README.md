@@ -503,6 +503,14 @@ Mercurial doesn't have a distinction between author and committer.
 
 Single branch merges are fast-forwarded, when possible.
 
+Handling of deleted branches
+----------------------------
+
+In Mercurial, a branch can be deleted, terminating its history.
+
+**hg-to-git** program handles these cases by assigning a ref with `_deleted@r<rev>` suffix.
+You can drop these refs, using `MapRef` specifications.
+
 Automatic deletion of merged branches
 -------------------------------------
 
