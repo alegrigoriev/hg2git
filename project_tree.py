@@ -1204,12 +1204,25 @@ class project_branch:
 			return obj
 
 		for fmt in *self.format_specifications, *self.cfg.format_specifications:
-			if not fmt.paths.fullmatch(path):
+			match = fmt.paths.fullmatch(path)
+
+			if not match:
+				# fullmatch can return None and False
+				if match is False and proj_tree.log_formatting_verbose and fmt.style:
+					# This path is specifically excluded from this format specification
+					print("FORMATTING: file \"%s\": explicitly excluded from format %s in branch \"%s\""
+									% (path, fmt.format_str, self.name), file=log_file)
 				continue
 
 			if not fmt.style:
 				# This format specification is setup to exclude it from formatting
 				fmt = None
+				if proj_tree.log_formatting_verbose:
+					print("FORMATTING: file \"%s\": explicitly excluded from processing in branch \"%s\""
+									% (path, self.name), file=log_file)
+			elif proj_tree.log_formatting:
+				print("FORMATTING: file \"%s\" with format %s in branch \"%s\""
+									% (path, fmt.format_str, self.name), file=log_file)
 			break
 		else:
 			fmt = None
@@ -1389,6 +1402,8 @@ class project_history_tree(history_reader):
 		self.options = options
 		self.log_file = options.log_file
 		self.log_commits = getattr(options, 'log_commits', False)
+		self.log_formatting_verbose = getattr(options, 'log_formatting_verbose', False)
+		self.log_formatting = self.log_formatting_verbose or getattr(options, 'log_formatting', False)
 
 		# This is a tree of branches
 		self.head_branch = None

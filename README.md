@@ -64,8 +64,14 @@ By default, `--verbose=dump` and `--verbose=all` don't dump empty revisions.
 	`--verbose=commits` 
 	- issue `git show --raw --parents --no-decorate --abbrev-commit` for each commit made during conversion.
 
+	`--verbose=format`
+	- log format specifications for all files subject to reformat.
+
+	`--verbose=format-verbose`
+	- log information about files explicitly excluded from formatting.
+
 	`--verbose=all`
-	- same as `--verbose=dump --verbose=revs --verbose=commits`
+	- same as `--verbose=dump --verbose=revs --verbose=commits --verbose=format`
 
 `--project <project name filter>`
 - selects projects to process. This option can appear multiple times. See [Project filtering](#project-filtering).

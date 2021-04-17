@@ -29,7 +29,8 @@ def main():
 	parser.add_argument('--version', action='version', version='%(prog)s 0.1')
 	parser.add_argument(dest='in_repository', help="Mercurial repository root directory")
 	parser.add_argument("--log", dest='log_file', help="Logfile destination; default to stdout")
-	parser.add_argument("--verbose", "-v", dest='verbose', help="Log verbosity:", choices=['dump', 'dump_all', 'revs', 'commits', 'all'],
+	parser.add_argument("--verbose", "-v", dest='verbose', help="Log verbosity:",
+						choices=['dump', 'dump_all', 'revs', 'commits', 'format', 'format-verbose', 'all'],
 						action='append', nargs='?', const=['dump', 'commits'], default=[])
 	parser.add_argument("--end-revision", "-e", metavar='REV', dest='end_revision', help="Revision to stop the input file processing")
 	parser.add_argument("--extract-file", "-X", metavar='PATH;<revision> <dest filename>',
@@ -82,6 +83,8 @@ def main():
 	options.log_dump_all = 'dump_all' in options.verbose
 	options.log_revs = 'revs' in options.verbose or 'all' in options.verbose
 	options.log_commits = 'commits' in options.verbose or 'all' in options.verbose
+	options.log_formatting = 'format' in options.verbose or 'all' in options.verbose
+	options.log_formatting_verbose = 'format-verbose' in options.verbose
 
 	options.decorate_revision_id = 'revision-id' in options.decorate_commit_message
 	options.decorate_change_id = 'change-id' in options.decorate_commit_message
