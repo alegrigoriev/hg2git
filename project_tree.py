@@ -93,6 +93,7 @@ class project_branch_rev:
 		self.prev_rev = prev_rev
 		# revisions_to_merge is a map of revisions pending to merge, keyed by (branch, index_seq).
 		self.revisions_to_merge = None
+		self.files_staged = 0
 		# any_changes_present is set to true if stagelist was not empty
 		self.any_changes_present = False
 		self.staging_base_rev = None
@@ -626,9 +627,26 @@ class project_branch_rev:
 
 	def build_difflist(self, HEAD):
 
+		# Count total number of staged files, besides from injected files
+		self.files_staged = HEAD.files_staged
+
 		return self.get_difflist(HEAD.tree, self.tree)
 
-	def get_stagelist(self, difflist, stagelist):
+	def delete_staged_file(self, stagelist, post_staged_list, path):
+		branch = self.branch
+		# Check if the path is one of the injected files
+		injected_file = branch.inject_files.get(path)
+		if injected_file:
+			post_staged_list.append(SimpleNamespace(path=path, obj=injected_file,
+										mode=branch.get_file_mode(path, injected_file)))
+
+		stagelist.append(SimpleNamespace(path=path, obj=None, mode=0))
+
+		# count staged files
+		self.files_staged -= 1
+		return
+
+	def get_stagelist(self, difflist, stagelist, post_staged_list):
 		branch = self.branch
 
 		for t in difflist:
@@ -643,7 +661,7 @@ class project_branch_rev:
 				if not obj1.is_file():
 					continue
 
-				stagelist.append(SimpleNamespace(path=path, obj=None, mode=0))
+				self.delete_staged_file(stagelist, post_staged_list, path)
 				continue
 
 			if not obj2.is_file():
@@ -653,6 +671,9 @@ class project_branch_rev:
 				mode = item2.mode
 			else:
 				mode = branch.get_file_mode(path, obj2)
+
+			if obj1 is None:
+				self.files_staged += 1
 
 			stagelist.append(SimpleNamespace(path=path, obj=obj2, mode=mode))
 			continue
@@ -666,10 +687,25 @@ class project_branch_rev:
 		# Parent revs need to be processed before building the stagelist
 		self.process_parent_revisions(HEAD)
 
+		# Current Git tree in the index matches the project tree in self.HEAD
 		branch = self.branch
 
 		stagelist = []
-		self.get_stagelist(difflist, stagelist)
+		post_staged_list = []
+		self.get_stagelist(difflist, stagelist, post_staged_list)
+
+		if self.files_staged == 0:
+			if HEAD.files_staged:
+				# delete injected files, too
+				for path in branch.inject_files:
+					stagelist.insert(0, SimpleNamespace(path=path, obj=None, mode=0))
+		elif HEAD.files_staged == 0:
+			# old tree was empty, new tree is not empty. Inject files:
+			for (path, obj2) in branch.inject_files.items():
+				stagelist.insert(0, SimpleNamespace(path=path, obj=obj2,
+										mode=branch.get_file_mode(path, obj2)))
+		else:
+			stagelist += post_staged_list
 
 		# If any .gitattributes file changes in the changelist, make an environment with a new workdir
 		for item in stagelist:
@@ -736,6 +772,11 @@ class project_branch:
 		self.revisions = []
 		self.first_revision = None
 
+		self.inject_files = {}
+		for file in self.cfg.inject_files:
+			if file.path and file.branch.match(self.name):
+				self.inject_files[file.path] = file.blob
+
 		self.edit_msg_list = []
 		for edit_msg in *branch_map.edit_msg_list, *self.cfg.edit_msg_list:
 			if edit_msg.branch.fullmatch(self.name):
@@ -785,8 +826,8 @@ class project_branch:
 			self.workdir_seq += 1
 			self.git_env = self.make_git_env()
 
-		# Check out all .gitattributes files from the tree
-		for path, obj in tree:
+		# Check out all .gitattributes files from the injected list and the tree
+		for path, obj in *self.inject_files.items(), *tree:
 			if not obj.is_file() or not path.endswith('.gitattributes'):
 				continue
 			# Strip the filename
@@ -1210,6 +1251,11 @@ class project_history_tree(history_reader):
 		self.total_tags_made = 0
 		self.total_refs_to_update = 0
 		self.prev_commits_made = None
+
+		for cfg in self.project_cfgs_list:
+			# Make blobs for files to be injected
+			for file in cfg.inject_files:
+				file.blob = self.make_blob(file.data, None)
 
 		return
 
