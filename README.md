@@ -716,6 +716,7 @@ The program matches paths against each glob pattern in sequence, until a match i
 If it's a negative match (the pattern is prefixed with '`!`'), the file is not ignored.
 
 Ignored files are logged, with `IGNORED:` prefix.
+If a whole directory is ignored, files under it are not printed separately.
 
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
