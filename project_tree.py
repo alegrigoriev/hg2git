@@ -1073,8 +1073,11 @@ class project_branch:
 
 	def preprocess_blob_object(self, obj, path):
 		proj_tree = self.proj_tree
+		log_file = proj_tree.log_file
 
 		if self.ignore_file(path):
+			if proj_tree.options.log_dump:
+				print('IGNORED: File %s' % path, file=log_file)
 			return obj
 
 		if obj.is_symlink():
