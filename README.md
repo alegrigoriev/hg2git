@@ -1346,13 +1346,20 @@ the program continues processing revisions from the source repository and queuin
 
 After all blobs needed for a commit has been hashed, and all its parent commits are also done,
 the program spawns a workitem in a separate thread to do `git update-index` operation to stage the new tree,
-the `git write-tree` operation, to get the new tree ID,
-and then a `git commit-tree` operation to create a new commit.
+and the `git write-tree` operation, to get the new tree ID.
+Multiple `update-index` operations for different branches can run in parallel.
+For a given branch, these operations can only run in sequence.
+
+After a `update-index`/`write-tree` workitem produces a tree ID for a new commit,
+the program spawns `git commit-tree` workitem operation to create a new commit.
 This operation takes the parent commit's ID (or multiple, for a merge commit), the tree ID,
 the commit message, author and timestamps, writes a commit object and returns the new commit ID.
 Even though for a given branch the `commit-tree` operations have to run sequentially,
 multiple such operations can run in parallel for different branches.
 
-The HG repository reading by the main thread normally completes before all commits are done.
+Note that for the given branch blob hashing, staging, and tree writing operation can run in parallel with `commit-tree` sequence.
+The program makes sure all these operations are ordered and only start when the necessary previous operations complete.
+
+The source repository reading by the main thread normally completes before all commits are done.
 The program waits for all commits on all branches to be done,
 and then writes/updates refs for all branches and tags, thus concluding its run.
