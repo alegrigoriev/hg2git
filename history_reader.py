@@ -798,6 +798,7 @@ class history_reader:
 		log_file = getattr(self.options, 'log_file', sys.stdout)
 		log_dump = getattr(self.options, 'log_dump', True)
 		log_revs = getattr(self.options, 'log_revs', False)
+		log_dump_all = getattr(self.options, 'log_dump_all', False)
 		end_revision = getattr(self.options, 'end_revision', None)
 
 		if end_revision is not None:
@@ -824,7 +825,7 @@ class history_reader:
 
 				self.update_progress(rev)
 
-				if log_dump:
+				if log_dump_all or (log_dump and hg_revision.nodes):
 					hg_revision.print(log_file)
 
 				old_tree = revision.tree
