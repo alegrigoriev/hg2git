@@ -556,6 +556,29 @@ For example, to inject `.gitignore` to the root directory of a branch, specify `
 Optional `Branch` attribute filters which branches are subject to injection of this file.
 The attribute value is a glob specification to match the branch name in the Mercurial repository.
 
+`<AddFile>` adds or replaces a file at the specified revision,
+equivalent to a file being added or modified in the HG repository at the revision:
+
+```xml
+	<Project>
+		<!-- Use file data -->
+		<AddFile Path="<file path in HG repo>"
+				File="<source file path>"
+				RevId="<add/replace at revision ID>" />
+		<!-- Use immediate data -->
+		<AddFile Path="<file path in HG repo>"
+				Rev="<add/replace at revision>">File data
+</AddFile>
+	</Project>
+```
+
+A file injected at one revision can be overridden by another file injected at different revision.
+This directive can also override a file which was previously present in a repository.
+
+`Rev="revision"` specifies the revision number at which the file is to be added.
+`<RevId>revision ID</RevId>` specifies the revision string at which the file is to be added.
+Only one `<Rev>` or `<RevId>` specification can be present.
+
 If data is to be loaded from a file specified by `File="<source file path>"` attribute,
 it's committed as is (with possible conversion defined by implicit and explicit EOL conversion rules).
 Note that the source file path is relative to the directory of this XML configuration file.
@@ -600,7 +623,9 @@ If both `.hgignore` and `.gitignore` are present in a directory,
 it overwrites the previous conversion result.
 If `.gitignore` gets deleted, the file produced from `.hgignore` is restored.
 
-The user needs to review the resulting file and make necessary correction in future commits.
+The user needs to review the resulting file and make necessary correction in future commits,
+or by manually injecting the correct file at the appropriate revisions,
+by using `<AddFile>` directives in the configuration file.
 
 `.hgeol` to `.gitattributes` conversion {#convert-hgeol}
 ----------------------
@@ -635,7 +660,9 @@ If `.gitattributes` gets deleted, the file produced from `.hgeol` is restored.
 Note that the generated `.gitattributes` file will also control conversion of Mercurial files to their Git
 representation during the repository conversion.
 
-The user needs to review the resulting file and make necessary correction in future commits.
+The user needs to review the resulting file and make necessary correction in future commits,
+or by manually injecting the correct file at the appropriate revisions,
+by using `<AddFile>` directives in the configuration file.
 
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------

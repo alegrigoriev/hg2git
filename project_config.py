@@ -736,6 +736,17 @@ class tag_map:
 
 		return refname
 
+class history_revision_action:
+	def __init__(self, action, path, kind=None, copyfrom_path=None, copyfrom_rev=None, text_content=None):
+		self.path = path
+		self.props = None
+		self.kind = kind
+		self.action = action
+		self.copyfrom_path = copyfrom_path
+		self.copyfrom_rev = copyfrom_rev
+		self.text_content = text_content
+		return
+
 class project_config:
 	def __init__(self, xml_node=None, filename=None):
 		self.name = ""
@@ -749,6 +760,7 @@ class project_config:
 		self.ref_map_set = set()
 		self.ref_map_list = []
 
+		self.revision_actions = {}
 		self.inject_files = []
 		self.replacement_vars = {}
 		self.replacement_chars = {}
@@ -788,6 +800,8 @@ class project_config:
 				self.edit_msg_list.append(self.process_edit_msg_node(node))
 			elif tag == 'InjectFile':
 				self.inject_files.append(self.process_injected_file(node))
+			elif tag == 'AddFile':
+				self.process_add_file(node)
 			elif node.get('FromDefault'):
 				if node.get('FromDefault') == 'Yes':
 					print("WARNING: Unrecognized tag <%s> in <Default>" % tag, file=sys.stderr)
@@ -800,6 +814,9 @@ class project_config:
 
 		self.make_chars_replacement_regex()
 		return
+
+	def add_revision_action(self, rev, action):
+		self.revision_actions.setdefault(rev, []).append(action)
 
 	## Add regex patterns and substitutions to convert HG branch names
 	# to refnames.
@@ -1031,6 +1048,43 @@ class project_config:
 
 		return file
 
+	def process_add_file(self, node):
+
+		file = node.get('File')
+		if file:
+			with open(Path(Path(self.filename).parent, file), 'rb') as fd:
+				data = fd.read()
+		elif node.text is None:
+			# Empty text as <Tag></Tag> gets returned as None, cannot distinguish from <Tag />
+			data = b''
+		else:
+			data = bytes(node.text, encoding='utf=8')
+
+		path = node.get('Path')
+		if not path:
+			raise Exception_cfg_parse('<AddFile> should have Path="<path>" attribute')
+
+		# Check if the path matches the project path
+		if node.get('FromDefault') != 'Yes' and not self.paths.match(path, True):
+			raise Exception_cfg_parse('<AddFile Path="%s"> doesn\'t match the project node Path' % (path))
+
+		try:
+			rev = int_property_value(node, 'Rev')
+		except ValueError as ex:
+			raise Exception_cfg_parse(str(ex))
+
+		if rev is None:
+			rev = node.get("RevId", None)
+			if not rev:
+				raise Exception_cfg_parse('<AddFile requires Rev="<rev>" or RevId="<rev>" attribute')
+
+		if path.endswith('/'):
+			kind = b'dir'
+		else:
+			kind = b'file'
+		self.add_revision_action(rev, history_revision_action(b'add', path, kind=kind, text_content=data))
+		return
+
 	## The function finds a branch map for a name
 	# @param name - branch name in Mercurial repository.
 	# If found, it returns a path_map object
@@ -1109,7 +1163,8 @@ class project_config:
 
 			if not inherit_default:
 				continue
-			if node.tag == 'InjectFile':
+			if node.tag == 'InjectFile' or \
+					node.tag == 'AddFile':
 				# These specifications from the default config are assigned first to be overwritten by later override
 				merged.insert(idx, node)
 				idx += 1
