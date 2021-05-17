@@ -501,6 +501,8 @@ The program makes a new Git commit on a branch when there are changes in its dir
 The commit message, timestamps and author/committer are taken from the commit information.
 Mercurial doesn't have a distinction between author and committer.
 
+Single branch merges are fast-forwarded, when possible.
+
 `.hgignore` to `.gitignore` conversion {#convert-hgignore}
 ----------------------
 
