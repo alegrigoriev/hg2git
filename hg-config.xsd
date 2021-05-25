@@ -113,6 +113,13 @@
 				<xs:element ref="EditMsg" />
 				<xs:element name="IgnoreFiles" type="xs:string" />
 				<xs:element ref="InjectFile" />
+				<xs:element name="DeleteFile">
+					<xs:complexType>
+						<xs:attribute name="Path" type="xs:string" use="required" />
+						<xs:attribute name="Rev" type="xs:unsignedLong" use="optional" />
+						<xs:attribute name="RevId" type="xs:string" use="required" />
+					</xs:complexType>
+				</xs:element>
 			</xs:choice>
 		</xs:sequence>
 	</xs:group>

@@ -718,6 +718,29 @@ If it's a negative match (the pattern is prefixed with '`!`'), the file is not i
 Ignored files are logged, with `IGNORED:` prefix.
 If a whole directory is ignored, files under it are not printed separately.
 
+Deleting files from the project tree
+----------------------------
+
+You can delete files (make them non-present in the resulting Git repository) at the given revision,
+by using `<DeleteFile>` directive under `<Default>` or `<Project>` section.
+You can delete files present in the original Mercurial repository, and also files injected by `<AddFile Path="path">` directive.
+You cannot delete files injected by `<InjectFile Path="path">` directive.
+
+```xml
+	<Project>
+		<DeleteFile Path="path"
+				Rev="revision"
+				RevId="Revision ID" />
+	</Project>
+```
+
+`Path="path"` attribute specifies the file path in the repository tree.
+`Rev="revision"` specifies the revision number at which the file is to be deleted.
+`<RevId>revision ID</RevId>` specifies the revision string at which the file is to be deleted.
+Only one `<Rev>` or `<RevId>` specification can be present.
+
+Unlike `<IgnoreFiles>` directive, `<DeleteFile>` lets you delete a file at the specified revision.
+
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
 

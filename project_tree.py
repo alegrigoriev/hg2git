@@ -248,6 +248,13 @@ class project_branch_rev:
 			if self.branch.ignore_file(path):
 				continue
 
+			if obj1 is not None and obj1.is_hidden():
+				obj1 = None
+			if obj2 is not None and obj2.is_hidden():
+				obj2 = None
+			if obj1 is None and obj2 is None:
+				continue
+
 			if obj1 is None:
 				# added items
 				if obj2.is_dir():
@@ -681,6 +688,13 @@ class project_branch_rev:
 			obj2 = t[2]
 			item1 = t[3]
 			item2 = t[4]
+
+			if obj1 is not None and obj1.is_hidden():
+				obj1 = None
+			if obj2 is not None and obj2.is_hidden():
+				obj2 = None
+			if obj1 is None and obj2 is None:
+				continue
 
 			if obj2 is None:
 				# a path is deleted
@@ -1609,6 +1623,16 @@ class project_history_tree(history_reader):
 			if rev_action.action == b'add':
 				if revision.tree.find_path(rev_action.path):
 					rev_action.action = b'change'
+			elif rev_action.action == b'delete':
+				# hide the file or directory
+				rev_action.action = b'hide'
+				src_node = revision.tree.find_path(rev_action.path)
+				if src_node is None:
+					raise Exception_history_parse('<DeletePath> operation refers to non-existing path "%s"' % rev_action.path)
+				if src_node.is_dir():
+					rev_action.kind = b'dir'
+				else:
+					rev_action.kind = b'file'
 
 			revision.tree = self.apply_node(rev_action, revision.tree)
 			continue

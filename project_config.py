@@ -807,6 +807,8 @@ class project_config:
 				self.process_add_file(node)
 			elif tag == 'IgnoreFiles':
 				self.ignore_files.append(node.text, vars_dict=self.replacement_vars)
+			elif tag == 'DeleteFile':
+				self.process_delete_file(node)
 			elif node.get('FromDefault'):
 				if node.get('FromDefault') == 'Yes':
 					print("WARNING: Unrecognized tag <%s> in <Default>" % tag, file=sys.stderr)
@@ -1096,6 +1098,28 @@ class project_config:
 		self.add_revision_action(rev, history_revision_action(b'add', path, kind=kind, text_content=data))
 		return
 
+	def process_delete_file(self, node):
+		path = node.get('Path')
+		if not path:
+			raise Exception_cfg_parse('<DeleteFile> should have Path="<path>" attribute')
+
+		# Check if the path matches the project path
+		if node.get('FromDefault') != 'Yes' and not self.paths.match(path, True):
+			raise Exception_cfg_parse('<DeleteFile> Path="%s"> doesn\'t match the project node Path' % (path))
+
+		try:
+			rev = int_property_value(node, 'Rev')
+		except ValueError as ex:
+			raise Exception_cfg_parse(str(ex))
+
+		if rev is None:
+			rev = node.get("RevId", None)
+			if not rev:
+				raise Exception_cfg_parse('<DeleteFile requires Rev="<rev>" or RevId="<rev>" attribute')
+
+		self.add_revision_action(rev, history_revision_action(b'delete', path))
+		return
+
 	## The function finds a branch map for a name
 	# @param name - branch name in Mercurial repository.
 	# If found, it returns a path_map object
@@ -1174,7 +1198,8 @@ class project_config:
 
 			if not inherit_default:
 				continue
-			if node.tag == 'InjectFile' or \
+			if node.tag == 'DeleteFile' or \
+					node.tag == 'InjectFile' or \
 					node.tag == 'AddFile':
 				# These specifications from the default config are assigned first to be overwritten by later override
 				merged.insert(idx, node)
