@@ -106,6 +106,10 @@ see [Mapping Mercurial usernames](#Mapping-HG-usernames) section.
 - specifies filename to write a template JSON file for mapping Mercurial usernames to Git author/committer names and emails,
 see [Mapping Mercurial usernames](#Mapping-HG-usernames) section.
 
+`--prune-refs <refs filter>`
+Selects refs namespace to prune in the target Git repository.
+See [Pruning stale refs](#Pruning-stale-refs).
+
 XML configuration file{#xml-config-file}
 ======================
 
@@ -920,6 +924,33 @@ tags under `refs/<namespace>/tags/<tagname>`.
 
 When the program run completes, all un-linked refs from `refs/<namespace>/`
 are transferred to `refs/` namespace.
+
+Pruning stale refs{#Pruning-stale-refs}
+-----------------
+
+When you run the program multiple times to fine-tune the path mapping specifications,
+the changes in the mapping can cause some refs (branch or tag names, also revision refs)
+not to be created anymore, because of name change, for instance.
+You'd want the old ref names to disappear.
+By default, the program doesn't clean the Git refs before its run.
+
+`--prune-refs <refs namespace>` command line option tells the program to clean stale ref names from the selected namespace(s).
+
+If `<refs namespace>` specification doesn't start with `heads`, `refs/heads`, `tags`, `refs/tags`, `revisions`, `refs/revisions`, it's assumed to cover `refs/heads/<refs namespace>/`, `refs/tags/<refs namespace>`, `refs/revisions/<refs namespace>`.
+
+If `<refs namespace>` is omitted in `--prune-refs` option, the program uses `Refs="refs namespaces"` attribute from `<Project>` sections:
+
+```xml
+	<Project Refs="refs namespaces">
+		.....
+	</Project>
+```
+
+The attribute value can contain multiple namespace specifications, separated with semicolon '`;`'.
+If projects are filtered by  `--project` command line options,
+only `Refs` attributes from active `<Project>` sections are used for ref pruning.
+If `Refs` attribute is not present in `<Project>` section, it's assumed equal to '`*`',
+which means it covers `refs/heads/*`, `refs/tags/*`, `refs/revisions/*`.
 
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
