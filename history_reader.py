@@ -248,7 +248,7 @@ class object_tree(base_tree_object):
 
 		return h
 
-	def set(self, path : str, obj):
+	def set(self, path : str, obj, **kwargs):
 		split = path.partition('/')
 
 		old_item = self.dict.get(split[0])
@@ -259,9 +259,9 @@ class object_tree(base_tree_object):
 				t = type(self)()
 			else:
 				t = t.object
-			obj = t.set(split[2], obj)
+			obj = t.set(split[2], obj, **kwargs)
 
-		if old_item is not None \
+		if old_item is not None and not kwargs \
 			and old_item.object.object_sha1 is not None \
 			and old_item.object.object_sha1 == obj.object_sha1:
 			# no changes
@@ -271,7 +271,7 @@ class object_tree(base_tree_object):
 
 		if old_item is not None:
 			self.items.remove(old_item)
-		new_item = self.item(split[0], obj)
+		new_item = self.item(split[0], obj, **kwargs)
 		self.items.append(new_item)
 		self.dict[split[0]] = new_item
 		return self
@@ -547,16 +547,16 @@ class history_revision:
 		return
 
 class history_reader:
+	TREE_TYPE = object_tree
+	BLOB_TYPE = object_blob
 
-	def __init__(self, options, tree_type=object_tree, blob_type=object_blob):
+	def __init__(self, options):
 		self.revisions = []
 		self.revision_dict = {}	# To index revisions by revision ID (for alternate source control systems)
 		self.last_rev = None
 		self.head = None
-		self.tree_type = tree_type
-		self.blob_type = blob_type
 		self.obj_dictionary = {}
-		self.empty_tree = self.finalize_object(tree_type())
+		self.empty_tree = self.finalize_object(self.TREE_TYPE())
 		self.options = options
 		self.quiet = getattr(options, 'quiet', False)
 		self.progress = getattr(options, 'progress', 1.)
@@ -711,7 +711,7 @@ class history_reader:
 		# node.path can be used by a hook to apply proper path-specific Git attributes
 		# Make a bare object_blob for the given data, or use an existing clone
 
-		obj = self.blob_type(properties=properties)
+		obj = self.BLOB_TYPE(properties=properties)
 		obj.data_len = len(data)
 		obj.data = data
 

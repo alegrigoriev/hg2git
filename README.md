@@ -1,13 +1,14 @@
-# parse-hg-repo: Mercurial repository reader
+# hg-to-git: Mercurial repository reader and convertor to Git
 
-This Python program allows you to read and analyze a Mercurial (HG) repository.
+This Python program allows you to read and analyze a Mercurial (HG) repository,
+and also optionally convert it to Git repository.
 
 Running the program
 -------------------
 
 The program is invoked by the following command line:
 
-`python parse-hg-repo.py <repository path> [<options>]`
+`python hg-to-git.py <repository path> [<options>]`
 
 The following command line options are supported:
 
@@ -65,6 +66,11 @@ By default, `--verbose=dump` and `--verbose=all` don't dump empty revisions.
 
 `--project <project name filter>`
 - selects projects to process. This option can appear multiple times. See [Project filtering](#project-filtering).
+
+`--target-repository <target Git repository path>`
+- Specifies path to the target Git repository.
+The repository should be previously initialized by a proper `git init` command.
+The program will not delete existing refs, only override them as needed.
 
 XML configuration file{#xml-config-file}
 ======================

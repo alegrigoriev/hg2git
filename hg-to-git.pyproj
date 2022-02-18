@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>24366486-a2ef-44ba-9218-a42594d71e1c</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>parse-hg-repo.py</StartupFile>
+    <StartupFile>hg-to-git.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -28,9 +28,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="exceptions.py" />
+    <Compile Include="git_repo.py" />
     <Compile Include="history_reader.py" />
     <Compile Include="lookup_tree.py" />
-    <Compile Include="parse-hg-repo.py" />
+    <Compile Include="hg-to-git.py" />
     <Compile Include="hg_reader.py" />
     <Compile Include="project_config.py" />
     <Compile Include="project_tree.py" />

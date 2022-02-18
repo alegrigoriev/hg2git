@@ -16,7 +16,7 @@ from __future__ import annotations
 import sys
 
 if sys.version_info < (3, 9):
-	sys.exit("parse-hg-repo: This package requires Python 3.9+")
+	sys.exit("hg-to-git: This package requires Python 3.9+")
 
 import os
 # By default, Mercurial API returns strings as transcoded from Unicode to local MBCS.
@@ -25,7 +25,7 @@ os.environ["HGENCODING"] = "UTF-8"
 
 def main():
 	import argparse
-	parser = argparse.ArgumentParser(description="Parse Mercurial repository", allow_abbrev=False)
+	parser = argparse.ArgumentParser(description="Convert Mercurial repository to Git", allow_abbrev=False)
 	parser.add_argument('--version', action='version', version='%(prog)s 0.1')
 	parser.add_argument(dest='in_repository', help="Mercurial repository root directory")
 	parser.add_argument("--log", dest='log_file', help="Logfile destination; default to stdout")
@@ -43,6 +43,7 @@ def main():
 					help="Don't use default mappings (refs/heads/*, refs/tags/*). The mappings need to be provided in a config file, instead")
 	parser.add_argument("--project", dest='project_filter', default=[], action='append',
 					help="Process only selected projects. The option value is Git-style globspec")
+	parser.add_argument("--target-repository", dest='target_repo', help="Target Git repository to write the conversion result")
 
 	options = parser.parse_args();
 
@@ -63,7 +64,7 @@ def main():
 	options.log_revs = 'revs' in options.verbose or 'all' in options.verbose
 
 	from hg_reader import hg_repository_reader, print_stats as print_hg_stats
-	from project_tree import project_history_tree
+	from project_tree import project_history_tree, print_stats as project_tree_stats
 
 	project_tree = project_history_tree(options)
 
@@ -72,6 +73,7 @@ def main():
 
 	finally:
 		print_hg_stats(log_file)
+		project_tree_stats(log_file)
 		log_file.close()
 
 	return 0

@@ -76,6 +76,7 @@ class hg_changectx_revision:
 		if parents:
 			parent_revision = parents.pop(0)
 			if parent_revision.branch != self.branch:
+				self.add_revision_node(b'add', b'branch', self.branch, copy_from_rev=parent_revision.rev_id)
 				parent_revision.children.remove(rev_hex)
 			# check if it creates a new sub-branch (splitting a branch with two with same name)
 			elif parent_revision.child_revision is None:
@@ -86,8 +87,10 @@ class hg_changectx_revision:
 					# Discard old tree to avoid memory usage ballooning
 					parent_revision.tree = None
 			else:
+				self.add_revision_node(b'add', b'branch', self.branch, copy_from_rev=parent_revision.rev_id)
 				parent_revision.children.remove(rev_hex)
 		else:
+			self.add_revision_node(b'add', b'branch', self.branch)
 			parent_changectx = None
 
 		if len(parents) == 0:
@@ -98,7 +101,11 @@ class hg_changectx_revision:
 			parent_changectx = reader.repository[parent_revision.changectx_node]
 
 			for parent_revision in parents:
+				self.add_revision_node(b'parent', b'branch', None, copy_from_rev=parent_revision.rev_id)
 				parent_revision.children.remove(rev_hex)
+				# Check if this merge ends a sub-branch
+				if len(parent_revision.children) == 0:
+					self.add_revision_node(b'delete', b'branch', parent_revision.rev_id)
 				continue
 			self.compare_change_contexts(parent_changectx, changectx)
 
