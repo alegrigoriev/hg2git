@@ -41,6 +41,8 @@ def main():
 	parser.add_argument("--tags", help="Namespace for tags, default 'refs/tags/'", default='refs/tags/')
 	parser.add_argument("--no-default-config", dest='use_default_config', default=True, action='store_false',
 					help="Don't use default mappings (refs/heads/*, refs/tags/*). The mappings need to be provided in a config file, instead")
+	parser.add_argument("--project", dest='project_filter', default=[], action='append',
+					help="Process only selected projects. The option value is Git-style globspec")
 
 	options = parser.parse_args();
 

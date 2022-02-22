@@ -63,6 +63,9 @@ By default, `--verbose=dump` and `--verbose=all` don't dump empty revisions.
 	`--verbose=all`
 	- same as `--verbose=dump --verbose=revs`
 
+`--project <project name filter>`
+- selects projects to process. This option can appear multiple times. See [Project filtering](#project-filtering).
+
 XML configuration file{#xml-config-file}
 ======================
 
@@ -296,6 +299,22 @@ The program can create a special ref for each commit it makes, to map Mercurial 
 An optional `<RevisionRef>` specification defines how the revision ref name root is formatted.
 Without `<RevisionRef>` specification, an implicit mapping will make
 refnames for branches (Git ref matching `refs/heads/<branch name>`) as `refs/revisions/<branch name>/r<rev number>`.
+
+Project filtering{#project-filtering}
+-----------------
+
+You can select to process only some projects - enable only selected `<Project>` sections in the XML configuration file.
+Projects to process are selected by specifying `--project <project name filter>` option(s) in the command line.
+
+Multiple `--project` options can be supplied in the command line.
+The option value can contain multiple project name filters, separated by commas.
+
+If a filter is prefixed with an exclamation mark '`!`',
+this pattern excludes projects (negative match).
+Note that in *bash* command line, '`!`' character needs to be single-quoted as "`'!'`"
+to prevent history expansion:
+
+`--project '!'<excluded project pattern>`
 
 Mercurial history tracking{#hg-history-tracking}
 ----------------
