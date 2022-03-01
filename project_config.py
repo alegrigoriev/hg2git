@@ -658,6 +658,7 @@ class branch_map:
 			self.revs_ref_sub = None
 
 		self.edit_msg_list = []
+		self.delete_if_merged = False
 
 	def key(self):
 		return self.name_match.regex
@@ -695,6 +696,7 @@ class branch_map:
 			globspec=self.name_match.globspec,
 			refname=refname,
 			edit_msg_list=self.edit_msg_list,
+			delete_if_merged=self.delete_if_merged,
 			revisions_ref=revisions_ref)
 
 class tag_map:
@@ -859,6 +861,8 @@ class project_config:
 
 		for node in branch_map_node.findall("./EditMsg"):
 			new_map.edit_msg_list.append(self.process_edit_msg_node(node))
+
+		new_map.delete_if_merged = bool_property_value(branch_map_node, 'DeleteIfMerged')
 
 		self.map_set.add(new_map.key())
 		self.map_list.append(new_map)
@@ -1094,9 +1098,10 @@ class project_config:
 				getattr(options, 'tags', 'refs/tags/'))
 
 		if getattr(options, 'use_default_config', True):
-		# By default, 'tip' tag is unmapped
+			# By default, all merged ("inactive") branches are deleted
+			# 'tip' tag is also unmapped
 			default_mappings = '''
-	<MapBranch>
+	<MapBranch DeleteIfMerged="yes">
 		<Branch>**</Branch>
 		<Refname>${Branches}${1}</Refname>
 	</MapBranch>

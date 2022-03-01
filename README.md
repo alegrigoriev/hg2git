@@ -503,6 +503,22 @@ Mercurial doesn't have a distinction between author and committer.
 
 Single branch merges are fast-forwarded, when possible.
 
+Automatic deletion of merged branches
+-------------------------------------
+
+The program can automatically delete a branch (do not write a ref for it) if it's been merged to another branch.
+To enable this behavior, add `DeleteIfMerged="Yes"` attribute to `<MapBranch>` section tag:
+
+```xml
+	<Project>
+		<MapBranch DeleteIfMerged="Yes">
+			........
+		</MapBranch>
+	</Project>
+```
+
+Note that there's no support for such attribute at `<Project>` level.
+
 `.hgignore` to `.gitignore` conversion {#convert-hgignore}
 ----------------------
 

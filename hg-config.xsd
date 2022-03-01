@@ -46,6 +46,7 @@
 				<xs:element minOccurs="0" maxOccurs="1" name="RevisionRef" type="xs:string" />
 				<xs:element minOccurs="0" ref="EditMsg" />
 			</xs:all>
+			<xs:attribute name="DeleteIfMerged" type="Boolean" use="optional" />
 		</xs:complexType>
 	</xs:element>
 
