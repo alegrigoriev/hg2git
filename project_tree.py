@@ -1600,6 +1600,29 @@ class project_history_tree(history_reader):
 			if node.copyfrom_rev is None:
 				return base_tree
 
+		elif node.action == b'merge':
+			if branch is None:
+				raise Exception_history_parse("'merge' operation refers to revision \"%s\" not mapped to any branch"
+							% (node.path))
+
+			rev = node.copyfrom_rev
+
+			src_revision = self.get_revision(rev)
+			if not src_revision or src_revision.rev is None:
+				raise Exception_history_parse("'merge' operation refers to non-present source revision \"%s\"" % (rev, ))
+
+			source_branch = src_revision.branch
+			if source_branch is None:
+				raise Exception_history_parse("'merge' operation revision \"%s\" not mapped to any branch"
+							% (rev, ))
+
+			print("MERGE PATH: Forcing merge of r%s onto r%s" % (rev, self.HEAD().rev), file=self.log_file)
+			rev_info = source_branch.get_revision(rev)
+			if not rev_info or rev_info.rev is None:
+				raise Exception_history_parse("'merge' operation refers to non-present source revision \"%s\"" % (rev, ))
+			branch.add_branch_to_merge(source_branch, rev_info)
+			self.set_branch_changed(branch)
+			return base_tree
 		elif node.action != b'parent':
 			return base_tree
 
@@ -1652,6 +1675,8 @@ class project_history_tree(history_reader):
 					rev_action.kind = b'dir'
 				else:
 					rev_action.kind = b'file'
+			elif rev_action.action == b'merge':
+				...
 
 			revision.tree = self.apply_node(rev_action, revision.tree)
 			continue

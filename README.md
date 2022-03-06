@@ -769,6 +769,33 @@ to which this specification applies.
 Only one `<Rev>` or `<RevId>` specification can be present.
 Only one `<FromRev>` or `<FromRevId>` specification can be present.
 
+Forcing a merge
+---------------
+
+Occasionally, you want to join two lines of history left disjointed in the repository.
+
+Use `<MergeBranch>` directive to create a connection from one repository revision to another revision.
+Note that this operation doesn't change the files, it just links the Git commits by a parent.
+
+`<MergeBranch>` directives can only be present in a `<Project>` section.
+If it's present  under `<Default>` section, it's ignored.
+
+```xml
+	<Project>
+		<MergeBranch>
+			<FromRev>source revision</FromRev>
+			<FromRevId>source revision ID</FromRevId>
+			<Rev>target revision</Rev>
+			<RevId>target revision ID</RevId>
+		</MergeBranch>
+	</Project>
+```
+
+`<RevId>revision ID</RevId>` and `<FromRevId>source revision ID</FromRevId>` specifies symbolic revision ID,
+to which this specification applies.
+Only one `<Rev>` or `<RevId>` specification can be present.
+Only one `<FromRev>` or `<FromRevId>` specification can be present.
+
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
 

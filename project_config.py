@@ -797,6 +797,8 @@ class project_config:
 				self.add_tag_map_node(node)
 			elif tag == 'CopyPath':
 				self.add_path_copy_node(node)
+			elif tag == 'MergeBranch':
+				self.add_branch_merge_node(node)
 			elif tag == 'Replace':
 				self.add_char_replacement_node(node)
 			elif tag == 'MapRef':
@@ -997,6 +999,51 @@ class project_config:
 
 		self.add_revision_action(rev,
 				history_revision_action(b'copy', path, copyfrom_path=from_path, copyfrom_rev=from_rev))
+		return
+
+	def add_branch_merge_node(self, path_merge_node):
+
+		node = path_merge_node.find("./RevId")
+		if node is not None:
+			rev = node.text
+			if not rev:
+				raise Exception_cfg_parse("Missing revision identifier in <MergeBranch><RevId> node")
+		else:
+			node = path_merge_node.find("./Rev")
+			if node is None:
+				raise Exception_cfg_parse('<MergeBranch> requires <FromRev> or <FromRevId>" specifier')
+
+			rev = node.text
+			if not rev:
+				raise Exception_cfg_parse("Missing revision number in <MergeBranch><Rev> node")
+			try:
+				rev = int(rev)
+			except ValueError:
+				raise Exception_cfg_parse("Invalid revision number '%s' in <MergeBranch><Rev> node" % (rev))
+
+		node = path_merge_node.find("./FromRevId")
+		if node is not None:
+			from_rev = node.text
+			if not from_rev:
+				raise Exception_cfg_parse("Missing revision identifier in <MergeBranch><FromRevId> node")
+		else:
+			node = path_merge_node.find("./FromRev")
+			if node is None:
+				raise Exception_cfg_parse("Missing <FromRev> node in <MergeBranch>")
+
+			from_rev = node.text
+			if not from_rev:
+				raise Exception_cfg_parse("Missing revision number in <MergeBranch><FromRev> node")
+			try:
+				from_rev = int(from_rev)
+			except ValueError:
+				raise Exception_cfg_parse("Invalid revision number '%s' in <MergeBranch><FromRev> node" % (from_rev))
+
+			if type(from_rev) is int and rev < from_rev:
+				raise Exception_cfg_parse("In <MergeBranch> specification, <FromRev> needs to be less or equal than <Rev>")
+
+		self.add_revision_action(rev,
+				history_revision_action(b'merge', '', kind=b'dir', copyfrom_path='', copyfrom_rev=from_rev))
 		return
 
 	def add_ref_map_node(self, ref_map_node):
@@ -1261,8 +1308,9 @@ class project_config:
 				idx += 1
 				continue
 
-			if node.tag == 'CopyPath':
-				# Not carrying the default CopyPath specifications over
+			if node.tag == 'MergePath' or \
+				node.tag == 'CopyPath':
+				# Not carrying the default MergePath and CopyPath specifications over
 				continue
 
 			if not inherit_default:

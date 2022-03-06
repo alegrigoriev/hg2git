@@ -152,6 +152,17 @@
 										</xs:all>
 									</xs:complexType>
 								</xs:element>
+								<!-- MergeBranch can only be present in a Project element -->
+								<xs:element name="MergeBranch">
+									<xs:complexType>
+										<xs:all>
+											<xs:element name="RevId" type="xs:string" minOccurs="0" maxOccurs="1" />
+											<xs:element name="Rev" type="xs:unsignedLong" minOccurs="0" maxOccurs="1" />
+											<xs:element name="FromRevId" type="xs:string" minOccurs="0" maxOccurs="1" />
+											<xs:element name="FromRev" type="xs:unsignedLong" minOccurs="0" maxOccurs="1" />
+										</xs:all>
+									</xs:complexType>
+								</xs:element>
 								<xs:element ref="AddFile" />
 							</xs:choice>
 						</xs:sequence>
