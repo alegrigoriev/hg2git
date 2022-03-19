@@ -661,6 +661,7 @@ class branch_map:
 		self.edit_msg_list = []
 		self.delete_if_merged = False
 		self.inject_files = []
+		self.ignore_files = path_list_match(match_dirs=True, match_files=True)
 
 	def key(self):
 		return self.name_match.regex
@@ -700,6 +701,7 @@ class branch_map:
 			edit_msg_list=self.edit_msg_list,
 			delete_if_merged=self.delete_if_merged,
 			inject_files=self.inject_files,
+			ignore_files=self.ignore_files,
 			revisions_ref=revisions_ref)
 
 class tag_map:
@@ -890,6 +892,9 @@ class project_config:
 
 		for node in branch_map_node.findall("./InjectFile"):
 			new_map.inject_files.append(self.process_injected_file(node))
+
+		for node in branch_map_node.findall("./IgnoreFiles"):
+			new_map.ignore_files.append(node.text, vars_dict=self.replacement_vars)
 
 		new_map.delete_if_merged = bool_property_value(branch_map_node, 'DeleteIfMerged')
 

@@ -688,11 +688,16 @@ Quite often, when a repository haven't been properly setup to ignore temporary f
 those files get committed by mistake. During Mercurial to Git conversion,
 the program can ignore those files and drop them from the resulting Git commits.
 
-To ignore files, use `<IgnoreFiles>` directive in `<Default>` or `<Project>` section:
+To ignore files, use `<IgnoreFiles>` directives.
+The directives can be present in `<Default>` or `<Project>` section, or in `<MapBranch>` section:
 
 ```xml
 	<Project>
 		<IgnoreFiles>glob pattern....</IgnoreFiles>
+		......
+		<MapBranch>
+			<IgnoreFiles>glob pattern....</IgnoreFiles>
+		</MapBranch>
 	</Project>
 ```
 
@@ -702,9 +707,12 @@ Multiple `<IgnoreFiles>` directives can be present.
 If a pattern is prefixed with an exclamation mark '`!`',
 it means this pattern is excluded from ignore (negative match).
 
+First, glob patterns in the directive under `<MapBranch>` section are matched against paths.
+
+Then glob patterns in the directive under `<Default>` or `<Project>` section are matched against paths.
 All `<IgnoreFiles>` definitions from `<Default>` are processed *after* all sections in `<Project>`.
 
-The program matches relative paths (in the branch worktree) against each in sequence, until a match is found.
+The program matches paths against each glob pattern in sequence, until a match is found.
 If it's a negative match (the pattern is prefixed with '`!`'), the file is not ignored.
 
 Mapping Mercurial usernames{#Mapping-HG-usernames}
