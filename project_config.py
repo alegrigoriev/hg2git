@@ -1341,6 +1341,7 @@ class project_config:
 				self.trim_trailing_whitespace = False
 				self.retab_only = False
 				self.indent_case = False
+				self.reindent_continuation = True
 
 				self.format_tag:bytes = None
 				self.format_str:str = None
@@ -1360,6 +1361,7 @@ class project_config:
 					tag += b':%d:%d:%d' % (self.tabs, self.indent, self.tab_size)
 					tag += b':%d' % (self.retab_only,)
 					tag += b':%d' % (self.indent_case,)
+					tag += b':%d' % (self.reindent_continuation,)
 
 				tag += b'\n'
 				self.format_tag = tag
@@ -1384,6 +1386,7 @@ class project_config:
 				fmt.tab_size = int_property_value(node, "TabSize", fmt.indent, range(1, 17))
 				fmt.retab_only = bool_property_value(node, "RetabOnly")
 				fmt.indent_case = bool_property_value(node, "IndentCase")
+				fmt.reindent_continuation = bool_property_value(node, "ReindentContinuation", True)
 
 			else:
 				fmt.trim_trailing_whitespace = bool_property_value(node, "TrimWhitespace", False)
@@ -1406,6 +1409,7 @@ class project_config:
 			fmt.format_str += ',RetabOnly=' + str(fmt.retab_only)
 		else:
 			fmt.format_str += ',IndentCase=' + str(fmt.indent_case)
+			fmt.format_str += ',Continuation=' + str(fmt.reindent_continuation)
 
 		return fmt
 
