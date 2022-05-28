@@ -1071,6 +1071,11 @@ The following options are supported:
 `--retab-only`
 - Do not analyze the input files as C/C++, only re-tab their indents.
 
+`--indent-case`
+- add one more level of indentation to `case` lines in `switch` blocks.
+Generally accepted formatting style puts `case` lines at the same level as opening `switch` line.
+Use this option if you want your code formatted with `case` lines at one more indentation level.
+
 Reformatting indents in files in Mercurial repository
 -------------------------------
 
@@ -1092,6 +1097,7 @@ A `<Formatting>` section has the following format:
 			TrimWhitespace="Yes|No"
 			TabSize="tab size"
 			RetabOnly="Yes|No"
+			IndentCase="Yes"
 			FixEOL="Yes"
 			FixLastEOL="Yes">
 			<Path>path filter</Path>
@@ -1116,6 +1122,11 @@ Its default value is same as `Indent`.
 to figure out the right indentation levels,
 only convert the existing spaces to tabs, or the other way around.
 You can use it to re-tab your `.pl` and `.py` files.
+
+`IndentCase="Yes"` attribute enables additional indentation of `case` lines in `switch` blocks.
+Most often used formatting style puts `case` lines at the same level as opening `switch` line.
+If you want your code formatted with `case` lines at one more indentation level,
+specify `IndentCase="Yes"` attribute in `<Formatting>`.
 
 {#fix-eol}
 `FixEOL="Yes"` attribute enables fixing of stray CR (carriage return) characters.
