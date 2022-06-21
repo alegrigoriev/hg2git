@@ -120,6 +120,11 @@ see [Mapping Mercurial usernames](#Mapping-HG-usernames) section.
 Selects refs namespace to prune in the target Git repository.
 See [Pruning stale refs](#Pruning-stale-refs).
 
+`--extract-file <path>,r<revision> <dest filename>`
+- extract a file by path and revision, into a file by `<dest filename>`.
+Useful mainly for debugging.
+This option can also be used when running without a target Git repository.
+
 XML configuration file{#xml-config-file}
 ======================
 

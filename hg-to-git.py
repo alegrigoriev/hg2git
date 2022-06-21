@@ -32,6 +32,9 @@ def main():
 	parser.add_argument("--verbose", "-v", dest='verbose', help="Log verbosity:", choices=['dump', 'dump_all', 'revs', 'commits', 'all'],
 						action='append', nargs='?', const=['dump', 'commits'], default=[])
 	parser.add_argument("--end-revision", "-e", metavar='REV', dest='end_revision', help="Revision to stop the input file processing")
+	parser.add_argument("--extract-file", "-X", metavar='PATH;<revision> <dest filename>',
+						dest='extract_file', nargs=2, action='append', default=[],
+						help="Extract a file by database path and revision timestamp")
 	group = parser.add_argument_group()
 	group.add_argument("--quiet", '-q', help="Suppress progress indication", action='store_true')
 	group.add_argument("--progress", nargs='?', help="Forces progress indication when not detected as on terminal, and optionally sets the update period in seconds",
