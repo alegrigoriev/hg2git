@@ -741,6 +741,34 @@ Only one `<Rev>` or `<RevId>` specification can be present.
 
 Unlike `<IgnoreFiles>` directive, `<DeleteFile>` lets you delete a file at the specified revision.
 
+Copying files and directories
+---------------------------------
+
+Sometimes you need to move a tree or a file into a directory you want it to be in your new Git repository.
+Use `<CopyPath>` directive to perform a copy.
+Note that this operation also creates a connection in the history from one place to another.
+
+`<CopyPath>` directives can only be present in a `<Project>` section.
+If it's present  under `<Default>` section, it's ignored.
+
+```xml
+	<Project>
+		<CopyPath>
+			<FromPath>source file/directory path</FromPath>
+			<FromRev>source revision</FromRev>
+			<FromRevId>source revision ID</FromRevId>
+			<Path>target file/directory path</Path>
+			<Rev>target revision</Rev>
+			<RevId>target revision ID</RevId>
+		</CopyPath>
+	</Project>
+```
+
+`<RevId>revision ID</RevId>` and `<FromRevId>source revision ID</FromRevId>` specifies symbolic revision ID,
+to which this specification applies.
+Only one `<Rev>` or `<RevId>` specification can be present.
+Only one `<FromRev>` or `<FromRevId>` specification can be present.
+
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------
 
