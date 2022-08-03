@@ -1352,6 +1352,7 @@ class project_config:
 				# format_tag is made for hashing and matching purposes
 				tag = self.style.encode()
 				tag += b':%d' % (self.trim_trailing_whitespace,)
+				tag += b':%d' % (self.fix_eol,)
 				if not self.skip_indent_format:
 					tag += b':%d:%d:%d' % (self.tabs, self.indent, self.tab_size)
 
@@ -1391,6 +1392,7 @@ class project_config:
 
 		fmt.format_str = fmt.style
 		fmt.format_str += ',indent=%d,tab=%d,TrimWs=%s' % (fmt.indent, fmt.tab_size, fmt.trim_trailing_whitespace)
+		fmt.format_str += ',FixEOL=' + str(fmt.fix_eol)
 
 		return fmt
 
