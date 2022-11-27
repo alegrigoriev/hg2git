@@ -28,6 +28,7 @@ from exceptions import Exception_history_parse, Exception_cfg_parse
 from history_reader import *
 from lookup_tree import *
 from rev_ranges import *
+from dependency_node import *
 import project_config
 import format_files
 
@@ -98,8 +99,9 @@ class revision_props:
 		return
 
 ### project_branch_rev keeps result for a processed revision
-class project_branch_rev:
+class project_branch_rev(dependency_node):
 	def __init__(self, branch:project_branch, prev_rev=None):
+		super().__init__(executor=branch.executor)
 		self.rev = None
 		self.branch = branch
 		self.log_file = branch.proj_tree.log_file
@@ -454,6 +456,7 @@ class project_branch_rev:
 				self.set_merged_revision(parent_rev)
 
 				self.parents.append(parent_rev)
+				self.add_dependency(parent_rev)
 				continue
 
 			self.revisions_to_merge = None
@@ -860,9 +863,10 @@ class project_branch_rev:
 			return self.staging_base_rev.staged_git_tree
 
 ## project_branch - keeps a context for a single change branch (or tag) of a project
-class project_branch:
+class project_branch(dependency_node):
 
 	def __init__(self, proj_tree:project_history_tree, branch_map, workdir:Path):
+		super().__init__(executor=proj_tree.executor)
 		self.name = branch_map.name
 		self.proj_tree = proj_tree
 		# Matching project's config
@@ -1052,7 +1056,7 @@ class project_branch:
 	### The function makes a commit on this branch, using the properties from
 	# history_revision object to set the commit message, date and author
 	# If there is no changes, and this is a tag
-	def make_commit(self, revision):
+	def prepare_commit(self, revision):
 		rev_info = self.set_head_revision(revision)
 		if rev_info is None:
 			# The branch haven't been re-created after deletion
@@ -1065,15 +1069,28 @@ class project_branch:
 		git_repo = self.git_repo
 		if git_repo is None:
 			self.stage = project_branch_rev(self, rev_info)
+			HEAD.ready()
 			return
 
 		stagelist = rev_info.build_stagelist(HEAD)
 
-		rev_info.staged_git_tree = rev_info.apply_stagelist(stagelist)
-
 		# Can only make the next stage rev after done with building the stagelist
 		# and processing the parent revision
 		self.stage = project_branch_rev(self, rev_info)
+
+		assert(rev_info.tree is not None)
+		self.proj_tree.commits_to_make += 1
+		rev_info.set_completion_func(self.finalize_commit, rev_info, stagelist)
+
+		# The newly built HEAD is not marked ready yet. Only previous HEAD is ready
+		HEAD.ready()
+
+		return
+
+	def finalize_commit(self, rev_info, stagelist):
+		git_repo = self.git_repo
+
+		rev_info.staged_git_tree = rev_info.apply_stagelist(stagelist)
 
 		parent_commits = []
 		parent_git_tree = self.initial_git_tree
@@ -1133,6 +1150,7 @@ class project_branch:
 			rev_info.committed_tree = rev_info.tree
 			self.proj_tree.commits_made += 1
 		else:
+			self.proj_tree.commits_to_make -= 1
 			rev_info.committed_git_tree = parent_git_tree
 			rev_info.committed_tree = parent_tree
 
@@ -1147,6 +1165,7 @@ class project_branch:
 				continue
 
 		rev_info.commit = commit
+		rev_info.props_list = None
 		return
 
 	def stage_changes(self, stagelist, git_env):
@@ -1281,6 +1300,8 @@ class project_branch:
 			# This also will bail out if branch delete happens twice in a revision
 			return
 
+		self.add_dependency(self.HEAD)
+		self.HEAD.ready()
 		rev_info = self.stage
 		rev_info.rev = revision.rev
 		rev_info.rev_id = revision.rev_id
@@ -1328,6 +1349,16 @@ class project_branch:
 	def create_tag(self, tagname, sha1, props, log_file=None):
 		tagname = self.cfg.map_ref(tagname)
 		return self.proj_tree.create_tag(tagname, sha1, props, self.name, log_file)
+
+	def ready(self):
+		# This node will be executed when the last commit of the branch is done
+
+		self.add_dependency(self.HEAD)
+		self.HEAD.ready()
+
+		self.release_all_dependents()
+
+		return super().ready()
 
 def make_git_object_class(base_type):
 	class git_object(base_type):
@@ -1455,6 +1486,8 @@ class project_history_tree(history_reader):
 			self.git_repo = None
 			self.git_working_directory = None
 
+		self.commits_to_make = 0
+		self.prev_commits_to_make = None
 		self.commits_made = 0
 		self.branch_dir_index = 1	# Used for branch working directory
 		self.total_branches_made = 0
@@ -1488,6 +1521,8 @@ class project_history_tree(history_reader):
 
 			actions = self.revision_actions.setdefault(int(extract_file_rev[1]), [])
 			actions.append(project_config.history_revision_action(b'extract', extract_file[1], copyfrom_path=extract_file_path))
+
+		self.executor = executor()
 
 		refs_list = getattr(options, 'prune_refs', None)
 		if self.git_repo and refs_list:
@@ -1724,6 +1759,8 @@ class project_history_tree(history_reader):
 
 		base_tree = super().apply_node(node, base_tree)
 
+		self.executor.run(existing_only=True)
+
 		branch = self.head_branch
 		if branch is not None:
 			self.set_branch_changed(branch)
@@ -1896,9 +1933,11 @@ class project_history_tree(history_reader):
 
 		revision.tree = self.finalize_object(revision.tree)
 
-		# make commits
+		# Prepare commits
 		for branch in self.branches_changed:
-			branch.make_commit(revision)
+			branch.prepare_commit(revision)
+
+		self.executor.run(existing_only=True)
 
 		self.branches_changed.clear()
 
@@ -1907,26 +1946,29 @@ class project_history_tree(history_reader):
 	def print_progress_line(self, rev=None):
 
 		if rev is None:
-			if self.commits_made == self.prev_commits_made:
+			if self.commits_made == self.prev_commits_made and self.commits_to_make == self.prev_commits_to_make:
 				return
 
-			self.print_progress_message("Processed %d revisions, made %d commits"
-				% (self.total_revisions, self.commits_made), end='\r')
-
-		elif self.commits_made:
-			if self.commits_made == self.prev_commits_made:
+			self.print_progress_message("Processed %d revisions, made %d commits%s"
+				% (self.total_revisions, self.commits_made, '' if self.commits_to_make == self.commits_made
+					else (", %d pending        " % (self.commits_to_make - self.commits_made))), end='\r')
+		elif self.commits_to_make:
+			if rev == self.last_rev and self.commits_made == self.prev_commits_made and self.commits_to_make == self.prev_commits_to_make:
 				return
 
-			self.print_progress_message("Processing revision %s, total %d commits"
-				% (rev, self.commits_made), end='\r')
+			self.print_progress_message("Processing revision %s, total %d commits%s"
+				% (rev, self.commits_made, '                      ' if self.commits_to_make == self.commits_made
+					else (", %d pending        " % (self.commits_to_make - self.commits_made))), end='\r')
+			self.last_rev = rev
 		else:
 			return super().print_progress_line(rev)
 
 		self.prev_commits_made = self.commits_made
+		self.prev_commits_to_make = self.commits_to_make
 		return
 
 	def print_last_progress_line(self):
-		if not self.commits_made:
+		if not self.commits_made and not self.commits_to_make:
 			super().print_last_progress_line()
 		return
 
@@ -1952,10 +1994,20 @@ class project_history_tree(history_reader):
 		try:
 			super().load(revision_reader)
 
+			for branch in self.all_branches():
+				branch.ready()
+
+			# Do blocked commits
+			while self.executor.run(existing_only=True):
+				self.update_progress(None)
+
 			# Flush the log of revision ref updates
 			self.log_file.write(self.revision_ref_log_file.getvalue())
 
 			self.finalize_branches()
+
+			# Flush leftover workitems (typically, only heads of deleted branches)
+			while self.executor.run(existing_only=False,block=False): pass
 
 			for ref, sha1 in self.prune_refs.items():
 				self.total_refs_to_update += 1
