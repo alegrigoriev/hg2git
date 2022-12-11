@@ -167,7 +167,7 @@ trim_trailing_whitespace = false
 *~
 *.obj
 </InjectFile>
-		<!--<Formatting Indent="8" TabSize="8" IndentStyle="tabs">
+		<!--<Formatting Indent="8" TabSize="8" IndentStyle="tabs" FormatComments="slashslash">
 			<Path>*.c;*.cpp;*.CPP;*.h;*.hpp</Path>
 		</Formatting>-->
 	</Project>
