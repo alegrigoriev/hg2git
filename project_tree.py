@@ -1443,6 +1443,10 @@ class project_history_tree(history_reader):
 			for rev, actions in cfg.revision_actions.items():
 				self.revision_actions.setdefault(rev, []).extend(actions)
 
+			for fmt in cfg.format_specifications:
+				if options.retab_only:
+					fmt.retab_only = True
+
 		for extract_file in getattr(options, 'extract_file', []):
 			extract_file_split = extract_file[0].partition(',')
 			extract_file_path = extract_file_split[0]

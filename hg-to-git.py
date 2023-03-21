@@ -60,6 +60,7 @@ def main():
 	parser.add_argument("--append-to-refs", action='append', default=[], metavar='refs/prev-repo-heads-and-tags', help="refs root of previous repository, see README")
 	parser.add_argument("--prune-refs", dest='prune_refs', help="Prune the selected ref namespaces. No value means 'heads/', 'tags/'.",
 					 action='append', nargs='?', const='')
+	parser.add_argument("--retab-only", default=False, action='store_true', help="Only convert existing indents to tabs or spaces.")
 
 	options = parser.parse_args();
 
