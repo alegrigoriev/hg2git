@@ -743,6 +743,14 @@ class project_branch_rev:
 
 			if obj1 is None:
 				self.files_staged += 1
+			else:
+				# Check that formatting hasn't changed for the path
+				format_str1 = getattr(obj1.fmt, 'format_str', None)
+				format_str2 = getattr(obj2.fmt, 'format_str', None)
+				if format_str1 != format_str2:
+					print("WARNING: Formatting for file %s in branch %s changed" % (path, branch.name),file=self.log_file)
+					print("Previous:", format_str1, file=self.log_file)
+					print("     New:", format_str2, file=self.log_file)
 
 			stagelist.append(SimpleNamespace(path=path, obj=obj2, mode=mode))
 			continue
