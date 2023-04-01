@@ -203,6 +203,15 @@ In absence of `<Project>` sections, the `<Default>` section is used as a default
 except for `<MapBranch>` specifications,
 which are merged _after_ the end of each `<Project>` section.
 
+`InheritDefault="No"` attribute in the `<Default>` section header suppresses
+inheritance from the hardcoded configuration.
+
+`InheritDefaultMappings="No"` suppresses inheritance of default `<MapBranch>`
+mappings.
+
+`<Vars>` and `<Replace>` specifications are always inherited from the hardcoded defaults
+or passed from the command line.
+
 `<Project>` section{#project-section}
 ---------------
 
@@ -215,6 +224,16 @@ If supplied, `Name` attribute values must be unique: two `<Project>` sections ca
 
 The `Branch` value filters the branches to be processed with this `<Project>`.
 Its value can be one or more wildcards (glob) specifications, separated by semicolons.
+
+`InheritDefault="No"` attribute in a `<Project>` or `<Default>` section suppresses
+inheritance from its default (from hardcoded config or from `<Default>`
+section).
+
+`InheritDefaultMappings="No"` suppresses inheritance of default `<MapBranch>`
+mappings.
+
+`<Vars>` and `<Replace>` specifications are always inherited from the hardcoded defaults
+or passed from the command line. Only their overrides in `<Default>` section will get ignored.
 
 Branch to Ref mapping{#branch-mapping}
 -------------------
