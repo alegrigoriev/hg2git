@@ -848,6 +848,8 @@ class project_branch:
 
 		if branch_map.revisions_ref:
 			self.revisions_ref = branch_map.revisions_ref
+		elif not getattr(self.proj_tree.options, 'create_revision_refs', False):
+			self.revisions_ref = None
 		elif self.refname.startswith('refs/heads/'):
 			self.revisions_ref = branch_map.refname.replace('refs/heads/', 'refs/revisions/', 1)
 		else:
