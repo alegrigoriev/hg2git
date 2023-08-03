@@ -72,6 +72,13 @@ By default, `--verbose=dump` and `--verbose=all` don't dump empty revisions.
 The repository should be previously initialized by a proper `git init` command.
 The program will not delete existing refs, only override them as needed.
 
+`--decorate-commit-message <tagline type>`
+- tells the program to add a tagline to each commit message, depending on `<tagline type>`.
+At this time, the only `<tagline type>` supported is `revision-id`,
+which tells the program to add `HG-revision: <rev>` taglines with Mercurial revision number to each commit.
+By default, the commit messages are undecorated. Note that if the original commit message was empty,
+the `HG-revision` tagline will always be added in its place.
+
 XML configuration file{#xml-config-file}
 ======================
 
