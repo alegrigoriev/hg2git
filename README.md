@@ -348,3 +348,17 @@ Mercurial history tracking{#hg-history-tracking}
 The program makes a new Git commit on a branch when there are changes in its directory tree.
 The commit message, timestamps and author/committer are taken from the commit information.
 Mercurial doesn't have a distinction between author and committer.
+
+Mapping Mercurial usernames{#Mapping-HG-usernames}
+---------------------
+
+Mercurial commits can store short usernames for commit authors, or name+email strings.
+Git stores full names and emails.
+
+If a Mercurial username cannot be split into an username and email,
+the program will make an email as `<HG username>@localhost`,
+same as Git does when `user.email` setting is not configured.
+
+In a Mercurial repository, changesets (commits) may come with author name and email
+combined into the changeset username, and even put in quotes sometimes.
+The program parses the usernames, making an effort to separate the name and email.

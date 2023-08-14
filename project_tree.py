@@ -25,6 +25,25 @@ from history_reader import *
 from lookup_tree import *
 import project_config
 
+def parse_name_email(name):
+	if m := re.fullmatch('([^<>]+?) +<([^<>@]+?(?:@| at | AT )[^<>@]+)>', name):
+		name = m[1]
+		email = m[2]
+		email = re.sub(' at | AT ', '@', email)
+		email = re.sub(' dot | DOT ', '.', email)
+		if m := re.fullmatch('"([^"]+)"', name):
+			name = m[1]
+	elif m := re.fullmatch('([^<>@]+)@[^<>@]+', name):
+		name = m[1]
+		email = m[0]
+	elif m := re.fullmatch('.+? +([^ ]+)', name):
+		name = m[0]
+		email = m[1] + "@localhost"
+	else:
+		email = name + "@localhost"
+
+	return name, email
+
 class author_props:
 	def __init__(self, author, email):
 		self.author = author
@@ -134,7 +153,7 @@ class project_branch_rev:
 
 		log = revision.log
 		if revision.author:
-			author_info = author_props(revision.author, revision.author + "@localhost")
+			author_info = author_props(*parse_name_email(revision.author))
 		else:
 			# git commit-tree barfs if author is not provided
 			author_info = author_props("(None)", "none@localhost")
