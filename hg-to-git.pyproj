@@ -35,6 +35,7 @@
     <Compile Include="hg_reader.py" />
     <Compile Include="project_config.py" />
     <Compile Include="project_tree.py" />
+    <Compile Include="rev_ranges.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="hg-config.xsd" />
