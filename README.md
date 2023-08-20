@@ -78,6 +78,9 @@ At this time, the only `<tagline type>` supported is `revision-id`,
 which tells the program to add `HG-revision: <rev>` taglines with Mercurial revision number to each commit.
 By default, the commit messages are undecorated.
 
+`--convert-hgignore`
+- convert `.hgignore` files to `.gitignore`. See [.hgignore to .gitignore conversion](#convert-hgignore) for more details.
+
 XML configuration file{#xml-config-file}
 ======================
 
@@ -392,6 +395,40 @@ Mercurial history tracking{#hg-history-tracking}
 The program makes a new Git commit on a branch when there are changes in its directory tree.
 The commit message, timestamps and author/committer are taken from the commit information.
 Mercurial doesn't have a distinction between author and committer.
+
+`.hgignore` to `.gitignore` conversion {#convert-hgignore}
+----------------------
+
+`--convert-hgignore` command line option enables conversion of `.hgignore` files to `.gitignore`.
+
+There are two major differences between `.hgignore` and `.gitignore`.
+
+1. By default, Mercurial processes `.hgignore` in the repository root only.
+`.hgignore` files in subdirectories must be referred by `subinclude` lines in the root `.hgignore`.
+A file with `.hgignore` syntax can also be included by an `include` directive.
+
+	With Git, all `.gitignore` files in the root and subdirectories are processed.
+There's no need to explicitly point to files in subdirectories.
+2. `.hgignore` can contain regular expressions and "glob" patterns.
+"glob" patterns can be "rooted" - relative to the `.hgignore` file location, or "non-rooted" - referring to
+any subdirectory.
+
+	`.gitignore` contains "glob" patterns only, which are "rooted",
+except for single-component patterns in form "*filename*" or "*directory/*".
+
+If `--convert-hgignore` command line option is present, the program converts all `.hgignore` files to `.gitignore`.
+`subinclude` and `include` directives are ignored.
+Regular expression patterns are converted to the equivalent glob patterns, when possible.
+If the program is unable to convert a regular expression, it emits a warning line to the generated `.gitignore` file.
+Rooted and non-rooted glob patterns are converted to `.gitignore` style patterns.
+If the program is unable to convert a glob pattern, it emits a warning line to the generated `.gitignore` file.
+
+If both `.hgignore` and `.gitignore` are present in a directory,
+`.hgignore` conversion result will overwrite `.gitignore`. When a revision changes `.gitignore` only,
+it overwrites the previous conversion result.
+If `.gitignore` gets deleted, the file produced from `.hgignore` is restored.
+
+The user needs to review the resulting file and make necessary correction in future commits.
 
 Mapping Mercurial usernames{#Mapping-HG-usernames}
 ---------------------

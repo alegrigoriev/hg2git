@@ -39,6 +39,7 @@ def main():
 	parser.add_argument("--config", "-c", help="XML file to configure conversion to Git repository")
 	parser.add_argument("--branches", help="Namespace for branches, default 'refs/heads/'", default='refs/heads/')
 	parser.add_argument("--tags", help="Namespace for tags, default 'refs/tags/'", default='refs/tags/')
+	parser.add_argument("--convert-hgignore", default=False, action='store_true', help="Convert .hgignore files to .gitignore")
 	parser.add_argument("--no-default-config", dest='use_default_config', default=True, action='store_false',
 					help="Don't use default mappings (refs/heads/*, refs/tags/*). The mappings need to be provided in a config file, instead")
 	parser.add_argument("--project", dest='project_filter', default=[], action='append',
