@@ -229,6 +229,55 @@ def hgignore_to_gitignore(data:bytes):
 		continue
 	return b'\n'.join(lines + [b''])	# Make sure the file ends with \n
 
+def hgeol_to_eol(glob, attr):
+	# .hgeol glob specifications are always root-relative.
+	# Convert the glob to Git style:
+	if re.fullmatch(r'\*\*(?!\*)((?!\*\*)[^/])+?/?', glob):
+		# the rest is a simple glob
+		glob = glob[1:]
+	elif re.fullmatch(r'((?!\*\*)[^/])+?/?', glob):
+		# HG treats it as a rooted glob, force it to be recognized as rooted by Git
+		glob = '/' + glob
+	# else: This glob specification will be handled as rooted by Git
+
+	if attr == 'LF':
+		return glob + ' text eol=lf'
+	elif attr == 'CRLF':
+		return glob + ' text eol=crlf'
+	elif attr == 'BIN':
+		return glob + ' binary'
+	elif attr is None:
+		return glob + ' text'
+	else:
+		return ''
+
+def hgeol_to_gitattributes(data):
+	import configparser
+	parser = configparser.ConfigParser(inline_comment_prefixes=('#', ';'),
+						interpolation=None, strict=False)
+	# Preserve glob case
+	parser.optionxform = str
+	try:
+		parser.read_string(data.decode(), source='.hgeol')
+	except configparser.Error as e:
+		return b'\n'.join(b'# ' + line for line in data.splitlines())
+
+	lines = [b'# .gitattributes converted from .hgeol file']
+	native = parser.get('repository', 'native', fallback=None)
+
+	for glob in reversed(parser.options('patterns')):
+		attr = parser.get('patterns', glob)
+		if attr == 'native':
+			attr = native
+		line = hgeol_to_eol(glob, attr).encode()
+		if line:
+			lines.append(line)
+		else:
+			lines.append(b'# %s = %s' % (glob, parser.get('patterns', glob)))
+		continue
+
+	return b'\n'.join(lines + [b''])	# Make sure the file ends with \n
+
 def changectx_to_tree(changectx):
 	tree = bytes_path_tree()
 	if changectx is None:
@@ -279,6 +328,7 @@ class hg_changectx_revision:
 		self.child_revision = None	# direct descendant
 		self.nodes = []
 		self.convert_hgignore = options.convert_hgignore
+		self.convert_hgeol = options.convert_hgeol
 
 		self.children = [child.hex() for child in changectx.children()]
 		parents = []
@@ -402,6 +452,10 @@ class hg_changectx_revision:
 			path = path.removesuffix(b'.hgignore') + b'.gitignore'
 			data = hgignore_to_gitignore(data)
 			action = b'change'
+		elif self.convert_hgeol and path == b'.hgeol':
+			path = b'.gitattributes'
+			data = hgeol_to_gitattributes(data)
+			action = b'change'
 		elif fctx.isexec():
 			props[b'executable'] = b'executable'
 		self.add_revision_node(action, b'file', path, data=data, props=props)
@@ -430,6 +484,25 @@ class hg_changectx_revision:
 			# If .hgignore exists at the current tree, restore .gitignore back instead of deleting
 			if hgignore_path in changectx:
 				data = hgignore_to_gitignore(changectx[hgignore_path].data())
+				return self.add_revision_node(b'change', b'file', path, data=data)
+
+		if not self.convert_hgeol:
+			pass
+		elif path == b'.hgeol':
+			path = b'.gitattributes'
+			# If .gitignore exists at the parent tree, restore it back instead of deleting
+			if path in changectx:
+				# .gitignore present in the current tree, restore it
+				return self.change_file(path, changectx[path])
+			elif path in parent_changectx:
+				# .gitignore not present in the current tree, but was present in the parent tree and has been already deleted
+				return
+		elif path == b'.gitattributes':
+			# deleting .gitattributes
+			hgeol_path = b'.hgeol'
+			# If .hgeol exists at the current tree, restore .gitattributes back instead of deleting
+			if hgeol_path in changectx:
+				data = hgeol_to_gitattributes(changectx[hgeol_path].data())
 				return self.add_revision_node(b'change', b'file', path, data=data)
 
 		self.add_revision_node(b'delete', None, path)

@@ -81,6 +81,9 @@ By default, the commit messages are undecorated.
 `--convert-hgignore`
 - convert `.hgignore` files to `.gitignore`. See [.hgignore to .gitignore conversion](#convert-hgignore) for more details.
 
+`--convert-hgeol`
+- convert `.hgeol` files to `.gitattributes`. See [.hgeol to .gitattributes conversion](#convert-hgeol) for more details.
+
 XML configuration file{#xml-config-file}
 ======================
 
@@ -427,6 +430,41 @@ If both `.hgignore` and `.gitignore` are present in a directory,
 `.hgignore` conversion result will overwrite `.gitignore`. When a revision changes `.gitignore` only,
 it overwrites the previous conversion result.
 If `.gitignore` gets deleted, the file produced from `.hgignore` is restored.
+
+The user needs to review the resulting file and make necessary correction in future commits.
+
+`.hgeol` to `.gitattributes` conversion {#convert-hgeol}
+----------------------
+
+`--convert-hgeol` command line option enables conversion of `.hgeol` files to `.gitattributes`.
+
+There are a few major differences between `.hgeol` and `.gitattributes`:
+
+1. By default, Mercurial processes `.hgeol` in the repository root only.
+There's no facility to include a subdirectory `.hgeol`.
+
+	With Git, all `.gitattributes` files in the root and subdirectories are processed.
+
+2. `.hgeol` contains "glob" patterns, which are always "rooted" - relative to the `.hgeol` file location.
+
+	`.gitattributes` contains "glob" patterns only, which are "rooted",
+except for single-component patterns in form "*filename*" or "*directory/*".
+
+3. Mercurial support specification for the repository (stored) representation of files.
+
+	Git always stores text files with LF line delimiters.
+
+If `--convert-hgeol` command line option is present, the program converts the root `.hgeol` file to `.gitattributes`.
+Rooted glob patterns are converted to `.gitattributes` style patterns.
+If the program is unable to convert a glob pattern, it emits a warning line to the generated `.gitattributes` file.
+
+If both `.hgeol` and `.gitattributes` are present in the root directory,
+`.hgeol` conversion result will overwrite `.gitattributes`. When a revision changes `.gitattributes` only,
+it overwrites the previous conversion result.
+If `.gitattributes` gets deleted, the file produced from `.hgeol` is restored.
+
+Note that the generated `.gitattributes` file will also control conversion of Mercurial files to their Git
+representation during the repository conversion.
 
 The user needs to review the resulting file and make necessary correction in future commits.
 
