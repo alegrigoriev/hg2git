@@ -548,8 +548,13 @@ class project_branch_rev:
 			if obj.git_sha1 is not None:
 				continue
 
+			if obj.is_symlink():
+				path = None
+			else:
+				path = item.path
+
 			obj.git_sha1 = branch.hash_object(obj.data,
-								item.path, self.git_env)
+								path, self.git_env)
 			continue
 
 		self.staged_tree = self.tree
@@ -788,6 +793,9 @@ class project_branch:
 		if obj.is_dir():
 			return 0o40000
 
+		if obj.is_symlink():
+			return 0o120000
+
 		return 0o100644
 
 	def hash_object(self, data, path, git_env):
@@ -795,6 +803,9 @@ class project_branch:
 
 	def preprocess_blob_object(self, obj, path):
 		proj_tree = self.proj_tree
+
+		if obj.is_symlink():
+			return obj
 
 		# Find git attributes - TODO fill cfg.gitattributes
 		for attr in self.cfg.gitattributes:
@@ -898,6 +909,9 @@ class git_blob(make_git_object_class(object_blob)):
 
 	def get_git_sha1(self):
 		return str(self.git_sha1)
+
+	def is_symlink(self):
+		return self.get_property(b'symlink', None) is not None
 
 class project_history_tree(history_reader):
 	BLOB_TYPE = git_blob

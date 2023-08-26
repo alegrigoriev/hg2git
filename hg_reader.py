@@ -29,7 +29,8 @@ def changectx_to_tree(changectx):
 	return tree
 
 class hg_revision_node:
-	def __init__(self, action:bytes, kind:bytes, path_or_branch:str|bytes, data:bytes=None, copy_from_rev=None, tag=None):
+	def __init__(self, action:bytes, kind:bytes, path_or_branch:str|bytes,
+			data:bytes=None, copy_from_rev=None, tag=None, props=None):
 		self.action = action
 		self.kind = kind
 		if type(path_or_branch) is bytes:
@@ -37,7 +38,7 @@ class hg_revision_node:
 
 		self.path = path_or_branch
 		self.tag = tag
-		self.props = None
+		self.props = props
 		self.copyfrom_path = None
 		self.copyfrom_rev = copy_from_rev
 		self.text_content = data
@@ -168,10 +169,10 @@ class hg_changectx_revision:
 		return
 
 	def add_revision_node(self, action:bytes, kind:bytes, path:str|bytes,
-				data:bytes=None, copy_from_rev=None, tag=None):
+				data:bytes=None, copy_from_rev=None, tag=None, props=None):
 
 		self.nodes.append(hg_revision_node(action, kind, path,
-					data=data, copy_from_rev=copy_from_rev, tag=tag))
+					data=data, copy_from_rev=copy_from_rev, tag=tag, props=props))
 		return
 
 	def create_tag(self, tag:str):
@@ -179,7 +180,10 @@ class hg_changectx_revision:
 
 	def change_file(self, path:bytes, fctx, action=b'change'):
 		data = fctx.data()
-		self.add_revision_node(action, b'file', path, data=data)
+		props = {}
+		if fctx.islink():
+			props[b'symlink'] = b'symlink'
+		self.add_revision_node(action, b'file', path, data=data, props=props)
 		return
 
 	def create_file(self, path:bytes, fctx):
