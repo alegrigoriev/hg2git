@@ -116,6 +116,8 @@ class hg_changectx_revision:
 		self.extra = changectx.extra().copy()
 		self.extra.pop(b'branch', None)
 
+		if cherry_picked_from := self.extra.pop(b'source', None):
+			self.add_revision_node(b'cherrypick', b'branch', None, copy_from_rev=cherry_picked_from.decode())
 		return
 
 	### Build a changelist for a merge (files() method cannot be used)

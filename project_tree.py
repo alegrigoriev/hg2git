@@ -105,6 +105,7 @@ class project_branch_rev:
 
 		# list of rev-info the commit on this revision would depend on - these are parent revs for the rev's commit
 		self.parents = []
+		self.cherry_pick_revs = []
 		self.props_list = []
 		self.tags = None
 		return
@@ -119,6 +120,38 @@ class project_branch_rev:
 		self.add_revision_props(revision)
 
 		return self
+
+	def get_cherrypick_str(self):
+		cherry_pick_msg = []
+		# Sort by ascending revision number
+		self.cherry_pick_revs.sort(key=lambda rev_info : rev_info.rev)
+		# Commit list without duplicates
+		cherry_pick_commits = {}
+		for rev_info in self.cherry_pick_revs:
+			if rev_info.rev_commit is None:
+				continue
+
+			if self.is_merged_from(rev_info):
+				continue
+
+			change_id = rev_info.change_id
+			if rev_info.commit not in cherry_pick_commits:
+				cherry_pick_commits[rev_info.commit] = rev_info
+
+		if len(cherry_pick_commits) == 1:
+			# Make the new commit inherit Change-Id
+			self.change_id = change_id
+
+		for rev_info in cherry_pick_commits.values():
+			refname = re.sub('(?:^refs/(?:heads/)?)(.*)?', r'\1', rev_info.branch.refname)
+			if not refname:
+				refname = rev_info.branch.name
+
+			cherry_pick_msg.append("Cherry-picked-from: %s %s;%d" % (rev_info.commit, refname, rev_info.rev))
+			if rev_info.change_id != self.change_id:
+				cherry_pick_msg[-1] += " Change-Id: %s" % (rev_info.change_id)
+
+		return '\n'.join(cherry_pick_msg)
 
 	### The function returns a single revision_props object, with:
 	# .log assigned a list of text paragraphs,
@@ -142,6 +175,10 @@ class project_branch_rev:
 	def get_commit_revision_props(self, base_rev):
 		decorate_revision_id=getattr(self.branch.proj_tree.options, 'decorate_revision_id', False)
 		props = self.get_combined_revision_props(base_rev, decorate_revision_id=decorate_revision_id)
+
+		cherry_pick_msg = self.get_cherrypick_str()
+		if cherry_pick_msg:
+			props.log.append(cherry_pick_msg)
 
 		return props
 
@@ -1134,6 +1171,19 @@ class project_history_tree(history_reader):
 			if branch is not None:
 				branch.apply_tag(node.tag)
 				self.set_branch_changed(branch)
+			return base_tree
+
+		if node.action == b'cherrypick':
+			# This is hg_history_revision:
+			try:
+				cherry_pick_rev = self.get_revision(node.copyfrom_rev)
+				# Get the branch revision project_branch_rev:
+				cherry_pick_rev = cherry_pick_rev.branch.get_revision(cherry_pick_rev.rev)
+				branch.stage.cherry_pick_revs = [cherry_pick_rev]
+				branch.stage.add_dependency(cherry_pick_rev)
+			except Exception_history_parse:
+				# A cherry-pick source may have been deleted
+				print("CHERRY-PICK: Graft source revision %s not found" % (node.copyfrom_rev, ), file=self.log_file)
 			return base_tree
 
 		if node.action == b'add':
