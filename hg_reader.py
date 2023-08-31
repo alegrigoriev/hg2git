@@ -183,6 +183,8 @@ class hg_changectx_revision:
 		props = {}
 		if fctx.islink():
 			props[b'symlink'] = b'symlink'
+		elif fctx.isexec():
+			props[b'executable'] = b'executable'
 		self.add_revision_node(action, b'file', path, data=data, props=props)
 		return
 

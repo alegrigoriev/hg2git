@@ -796,6 +796,9 @@ class project_branch:
 		if obj.is_symlink():
 			return 0o120000
 
+		if obj.get_property(b'executable', False):
+			return 0o100755
+
 		return 0o100644
 
 	def hash_object(self, data, path, git_env):
