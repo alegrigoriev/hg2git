@@ -103,6 +103,7 @@
 				<xs:element minOccurs="0" ref="EditMsg" />
 				<xs:element ref="InjectFile" minOccurs="0" />
 				<xs:element name="IgnoreFiles" type="xs:string" minOccurs="0" />
+				<xs:element ref="Formatting" minOccurs="0" />
 			</xs:all>
 			<xs:attribute name="DeleteIfMerged" type="Boolean" use="optional" />
 		</xs:complexType>

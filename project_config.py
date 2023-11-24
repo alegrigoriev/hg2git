@@ -709,6 +709,7 @@ class branch_map:
 		self.delete_if_merged = False
 		self.inject_files = []
 		self.ignore_files = path_list_match(match_dirs=True, match_files=True)
+		self.format_specifications = []
 
 	def key(self):
 		return self.name_match.regex
@@ -749,6 +750,7 @@ class branch_map:
 			delete_if_merged=self.delete_if_merged,
 			inject_files=self.inject_files,
 			ignore_files=self.ignore_files,
+			format_specifications=self.format_specifications,
 			revisions_ref=revisions_ref)
 
 class tag_map:
@@ -985,6 +987,9 @@ class project_config:
 
 		for node in branch_map_node.findall("./IgnoreFiles"):
 			new_map.ignore_files.append(node.text, vars_dict=self.replacement_vars)
+
+		for node in branch_map_node.findall("./Formatting"):
+			new_map.format_specifications.append(self.process_formatting_node(node))
 
 		new_map.delete_if_merged = bool_property_value(branch_map_node, 'DeleteIfMerged')
 
@@ -1374,12 +1379,13 @@ class project_config:
 
 			else:
 				fmt.trim_trailing_whitespace = bool_property_value(node, "TrimWhitespace", False)
+			fmt.fix_eol = bool_property_value(node, "FixEOL")
 
 		except ValueError as ex:
 			print(str(ex), file=sys.stderr)
 			return
 
-		if not fmt.style and fmt.trim_trailing_whitespace:
+		if not fmt.style and (fmt.trim_trailing_whitespace or fmt.fix_eol):
 			fmt.style = 'keep'
 			fmt.skip_indent_format = True
 

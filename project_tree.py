@@ -881,6 +881,8 @@ class project_branch:
 
 		self.ignore_files = branch_map.ignore_files
 
+		self.format_specifications = branch_map.format_specifications
+
 		# Absolute path to the working directory.
 		# index files (".git.index<index_seq>") and .gitattributes files will be placed there
 		self.git_index_directory = workdir
@@ -1201,9 +1203,7 @@ class project_branch:
 		if obj.is_symlink():
 			return obj
 
-		# The input path is relative to the root of the source repository
-		for fmt in self.cfg.format_specifications:
-			# Format paths are relative to the source root
+		for fmt in *self.format_specifications, *self.cfg.format_specifications:
 			if not fmt.paths.fullmatch(path):
 				continue
 
