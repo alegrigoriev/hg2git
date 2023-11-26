@@ -29,13 +29,14 @@ def changectx_to_tree(changectx):
 	return tree
 
 class hg_revision_node:
-	def __init__(self, action:bytes, kind:bytes, path_or_branch:str|bytes, data:bytes=None, copy_from_rev=None):
+	def __init__(self, action:bytes, kind:bytes, path_or_branch:str|bytes, data:bytes=None, copy_from_rev=None, tag=None):
 		self.action = action
 		self.kind = kind
 		if type(path_or_branch) is bytes:
 			path_or_branch = path_or_branch.decode()
 
 		self.path = path_or_branch
+		self.tag = tag
 		self.props = None
 		self.copyfrom_path = None
 		self.copyfrom_rev = copy_from_rev
@@ -109,6 +110,9 @@ class hg_changectx_revision:
 				continue
 			self.compare_change_contexts(parent_changectx, changectx)
 
+		for tag in changectx.tags():
+			self.create_tag(tag.decode())
+
 		self.extra = changectx.extra().copy()
 		self.extra.pop(b'branch', None)
 
@@ -162,11 +166,14 @@ class hg_changectx_revision:
 		return
 
 	def add_revision_node(self, action:bytes, kind:bytes, path:str|bytes,
-				data:bytes=None, copy_from_rev=None):
+				data:bytes=None, copy_from_rev=None, tag=None):
 
 		self.nodes.append(hg_revision_node(action, kind, path,
-					data=data, copy_from_rev=copy_from_rev))
+					data=data, copy_from_rev=copy_from_rev, tag=tag))
 		return
+
+	def create_tag(self, tag:str):
+		return self.add_revision_node(b'tag', b'branch', None, tag=tag)
 
 	def change_file(self, path:bytes, fctx, action=b'change'):
 		data = fctx.data()

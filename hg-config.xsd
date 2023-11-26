@@ -26,6 +26,15 @@
 		</xs:complexType>
 	</xs:element>
 
+	<xs:element name="MapTag">
+		<xs:complexType>
+			<xs:all>
+				<xs:element minOccurs="1" maxOccurs="1" name="Tag" type="xs:string" />
+				<xs:element minOccurs="0" maxOccurs="1" name="Refname" type="xs:string" />
+			</xs:all>
+		</xs:complexType>
+	</xs:element>
+
 	<xs:group name='Configuration'>
 		<xs:sequence>
 			<xs:choice maxOccurs="unbounded">
@@ -48,6 +57,7 @@
 					</xs:complexType>
 				</xs:element>
 				<xs:element ref="MapBranch" />
+				<xs:element ref="MapTag" />
 			</xs:choice>
 		</xs:sequence>
 	</xs:group>

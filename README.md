@@ -319,6 +319,50 @@ An optional `<RevisionRef>` specification defines how the revision ref name root
 Without `<RevisionRef>` specification, an implicit mapping will make
 refnames for branches (Git ref matching `refs/heads/<branch name>`) as `refs/revisions/<branch name>/r<rev number>`.
 
+Tag to Ref mapping{#tag-mapping}
+-------------------
+
+Unlike Git, Mercurial tags don't live in a `refs/tags/` namespace. They are tracked with `.hgtags` file.
+Thus, the program needs to be told how to map tags to Git refs.
+
+This program provides a default mapping of a tag name to a ref, by prepending `refs/tags/` to a tag name.
+
+Non-default mapping allows to handle more complex cases.
+
+You can map a tag name matching the specified pattern, into a specific Git ref,
+built by substitution from the original name. This is done by `<MapTag>` sections in `<Project>` or `<Default>` sections:
+
+```xml
+	<Project>
+		<MapTag>
+			<Tag>tag matching specification</Tag>
+			<Refname>ref substitution string</Refname>
+		</MapTag>
+	</Project>
+```
+
+Here, `tag matching specification` is a glob (wildcard) match specification to match the Mercurial branch name,
+`<Refname>` is the refname substitution specification to make Git branch refname for this branch,
+and the optional `<RevisionRef>` substitution specification makes a root for revision refs for commits made on this branch.
+
+Every time a new branch is created in a repository,
+the program tries to map its path into a symbolic reference AKA ref.
+
+`<MapTag>` definitions are processed in their order in the config file in each `<Project>`.
+First `<Project>` definitions are processed, then definitions from `<Default>`,
+and then default mappings described above (unless they are suppressed by `--no-default-config` command line option).
+
+The first `<MapTag>` with `<Branch>` matching the tag name will define which Git "branch" this directory belongs to.
+The rest of the path will be a subdirectory in the branch worktree.
+
+The target refname in `<Refname>` specification is assumed to begin with `refs/` prefix.
+If the `refs/` prefix is not present, it's implicitly added.
+
+If a refname produced for a tag collides with a refname for a different tag,
+the program will try to create an unique name by appending `__<number>` to it.
+
+If `<Refname>` specification is omitted, this directory and all its subdirectories are explicitly unmapped from creating a branch. 
+
 Project filtering{#project-filtering}
 -----------------
 

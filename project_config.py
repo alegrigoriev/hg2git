@@ -695,6 +695,40 @@ class branch_map:
 			refname=refname,
 			revisions_ref=revisions_ref)
 
+class tag_map:
+	def __init__(self, cfg, name, refname):
+		self.cfg = cfg
+		self.name_match = glob_match(name, cfg.replacement_vars, match_dirs=False, match_files=True, capture=True)
+
+		if refname:
+			self.refname_sub = glob_expand(refname, cfg.replacement_vars, self.name_match)
+		else:
+			self.refname_sub = None
+
+		return
+
+	def key(self):
+		return self.name_match.regex
+
+	def match(self, name):
+		m = self.name_match.fullmatch(name)
+
+		if not m:
+			return None
+
+		name = m[0]
+
+		if not self.refname_sub:
+			# This ref map suppresses creation of a branch
+			return ""
+
+		refname = self.refname_sub.expand(m)
+		
+		if refname and not refname.startswith('refs/'):
+			refname = 'refs/' + refname
+
+		return refname
+
 class project_config:
 	def __init__(self, xml_node=None, filename=None):
 		self.name = ""
@@ -703,6 +737,8 @@ class project_config:
 		## the map keeps regular expression replacements patterns
 		self.map_set = set()
 		self.map_list = []
+		self.tag_map_set = set()
+		self.tag_map_list = []
 
 		self.replacement_vars = {}
 		self.replacement_chars = {}
@@ -731,6 +767,8 @@ class project_config:
 				self.add_vars_node(node)
 			elif tag == 'MapBranch':
 				self.add_branch_map_node(node)
+			elif tag == 'MapTag':
+				self.add_tag_map_node(node)
 			elif tag == 'Replace':
 				self.add_char_replacement_node(node)
 			elif node.get('FromDefault'):
@@ -815,6 +853,35 @@ class project_config:
 
 		return
 
+	def add_tag_map_node(self, tag_map_node):
+
+		node = tag_map_node.find("./Tag")
+		if node is None:
+			raise Exception_cfg_parse("Missing <Tag> node in <MapTag>")
+
+		name = node.text
+		if not name:
+			raise Exception_cfg_parse("Missing tag name pattern in <MapTag><Tag> node")
+
+		node = tag_map_node.find("./Refname")
+		if node is not None:
+			refname = node.text
+		else:
+			refname = None
+
+		new_map = tag_map(self, name, refname)
+
+		if new_map.key() in self.tag_map_set:
+			if tag_map_node.get('FromDefault') is None:
+				raise Exception_cfg_parse("Tag mapping for '%s' specified twice in the config" % new_map.name_match.globspec)
+			# Ignore duplicate mapping from <Default>
+			return
+
+		self.tag_map_set.add(new_map.key())
+		self.tag_map_list.append(new_map)
+
+		return
+
 	def add_char_replacement_node(self, node):
 		chars_node = node.find("./Chars")
 		with_node = node.find("./With")
@@ -850,6 +917,16 @@ class project_config:
 
 		return None
 
+	def map_tag(self, name):
+
+		# The match patterns are made in order of their appearance in XML config Project section
+		for tag_map in self.tag_map_list:
+			refname = tag_map.match(name)
+			if refname is not None:
+				return refname
+
+		return None
+
 	def map_ref(self, ref):
 		if not ref:
 			return ref
@@ -873,7 +950,8 @@ class project_config:
 
 		idx = 0
 		for node in default_node.findall("./*"):
-			if node.tag == 'MapBranch':
+			if node.tag == 'MapBranch' \
+				or node.tag == 'MapTag':
 				if not inherit_default_mapping:
 					continue
 				# Map from default config is assigned last to be processed after non-default

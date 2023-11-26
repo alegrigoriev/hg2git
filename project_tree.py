@@ -106,6 +106,7 @@ class project_branch_rev:
 		# list of rev-info the commit on this revision would depend on - these are parent revs for the rev's commit
 		self.parents = []
 		self.props_list = []
+		self.tags = None
 		return
 
 	def set_revision(self, revision):
@@ -433,6 +434,14 @@ class project_branch_rev:
 		self.add_parent_revision(rev_to_merge)
 		return
 
+	def add_tag(self, tag_ref):
+		if self.tags is None:
+			self.tags = [tag_ref]
+		elif tag_ref not in self.tags:
+			# If multiple files get same label, apply the label only once
+			self.tags.append(tag_ref)
+		return
+
 	def get_difflist(self, old_tree, new_tree):
 		branch = self.branch
 		if old_tree is None:
@@ -624,6 +633,19 @@ class project_branch:
 		self.set_rev_info(rev_info.rev, rev_info)
 		return rev_info
 
+	def apply_tag(self, tag):
+		# Map the branch and label name to a tag
+		tag_ref = self.cfg.map_tag(tag)
+		# If there's no mapping for a tag, map_tag returns None
+		# If a tag is explicitly unmapped, map_tag returns ""
+		if tag_ref:
+			self.stage.add_tag(tag_ref)
+		elif tag_ref is None:
+			print('WARNING: Tag "%s" not mapped to any ref' % (tag,), file=self.proj_tree.log_file)
+		else:
+			print('WARNING: Tag "%s" explicitly not mapped to a ref' % (tag,), file=self.proj_tree.log_file)
+		return
+
 	### The function makes a commit on this branch, using the properties from
 	# history_revision object to set the commit message, date and author
 	# If there is no changes, and this is a tag
@@ -695,6 +717,16 @@ class project_branch:
 		else:
 			rev_info.committed_git_tree = parent_git_tree
 			rev_info.committed_tree = parent_tree
+
+		if rev_info.tags is not None:
+			for refname in rev_info.tags:
+				if rev_info.props_list and refname.startswith('refs/tags/'):
+					props = rev_info.props_list[0]
+					if props.log:
+						self.create_tag(refname, commit, props, log_file=rev_info.log_file.revision_ref)
+						continue
+				self.update_ref(refname, commit, log_file=rev_info.log_file.revision_ref)
+				continue
 
 		rev_info.commit = commit
 		return
@@ -1096,6 +1128,12 @@ class project_history_tree(history_reader):
 					if delete_revision.branch is branch:
 						self.head_branch = None
 						return self.empty_tree
+			return base_tree
+
+		if node.action == b'tag':
+			if branch is not None:
+				branch.apply_tag(node.tag)
+				self.set_branch_changed(branch)
 			return base_tree
 
 		if node.action == b'add':
