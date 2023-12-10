@@ -887,6 +887,7 @@ It consists of multiple sections which map HG usernames to Name and Email attrib
 }
 ```
 
+Optional `CommitterName` and `CommitterEmail` items can also be present, to specify different committer.
 For example:
 
 ```json
@@ -898,6 +899,8 @@ For example:
 	"luke.skywalker": {
 		"Name": "Luke Skywalker",
 		"Email": "lskywalker@tatooine.example.com"
+		"CommitterName": "Yoda",
+		"CommitterEmail": "yoda@dagobah.example.com"
 	}
 }
 ```

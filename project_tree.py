@@ -47,12 +47,25 @@ def parse_name_email(name):
 	return name, email
 
 class author_props:
-	def __init__(self, author, email):
+	def __init__(self, author, email, committer=None, committer_email=None):
 		self.author = author
 		self.email = email
+
+		if committer is None:
+			self.committer = author
+		else:
+			self.committer = committer
+
+		if committer_email is None:
+			self.committer_email = email
+		else:
+			self.committer_email = committer_email
 		return
 
 	def __str__(self):
+		if self.committer != self.author or self.committer_email != self.email:
+			return "%s <%s> (Committed by: %s <%s>)" % (
+					self.author, self.email, self.committer, self.committer_email)
 		return "%s <%s>" % (self.author, self.email)
 
 def log_to_paragraphs(log):
@@ -1860,8 +1873,10 @@ class project_history_tree(history_reader):
 		for key, d in authors_map.items():
 			name = d.get("Name")
 			email = d.get("Email")
+			committer = d.get("CommitterName", name)
+			committer_email = d.get("CommitterEmail", email)
 			if name and email:
-				self.authors_map[key] = author_props(name, email)
+				self.authors_map[key] = author_props(name, email, committer, committer_email)
 		return
 
 	def map_author(self, author):
@@ -1877,7 +1892,10 @@ class project_history_tree(history_reader):
 		else:
 			name = author
 
-		author_info = author_props(*parse_name_email(name))
+		if m := re.fullmatch(r'([^,]+?)\s*,\s*([^,]+)', name):
+			author_info = author_props(*parse_name_email(m[1]), *parse_name_email(m[2]))
+		else:
+			author_info = author_props(*parse_name_email(name))
 
 		self.authors_map[author] = author_info
 		return author_info
@@ -1897,6 +1915,10 @@ class project_history_tree(history_reader):
 				"Name" : author_info.author,
 				"Email" : author_info.email,
 				}
+			if author_info.committer is not author_info.author:
+				d["CommitterName"] = author_info.committer
+			if author_info.committer_email is not author_info.email:
+				d["CommitterEmail"] = author_info.committer_email
 			authors[name] = d
 
 		with open(filename, 'wt', encoding='utf=8') as fd:
