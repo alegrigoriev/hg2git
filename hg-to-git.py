@@ -54,6 +54,7 @@ def main():
 	parser.add_argument("--create-revision-refs", default=False,
 					help="Create refs under refs/revisions for each revision on each branch",
 					action='store_true')
+	parser.add_argument("--sha1-map", '-S', help="Text file to map source blobs with attributes to Git SHA1")
 	parser.add_argument("--authors-map", '-A', dest='authors_map', help="JSON file to map Mercurial usernames to Git names and emails")
 	parser.add_argument("--make-authors-map", dest='make_authors', help="Create a JSON template for users file, to be used as --users-map file")
 	parser.add_argument("--append-to-refs", action='append', default=[], metavar='refs/prev-repo-heads-and-tags', help="refs root of previous repository, see README")

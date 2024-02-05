@@ -782,7 +782,7 @@ class project_branch_rev:
 				branch.make_gitattributes_tree(self.tree, HEAD.tree)
 				break
 		else:
-			if HEAD is not self.prev_rev:
+			if HEAD is not self.prev_rev or branch.gitattributes_sha1 is None:
 				branch.make_gitattributes_tree(self.tree, self.prev_rev.tree)
 
 		# Need to save the git environment now, after make_gitattributes_tree(),
@@ -801,8 +801,25 @@ class project_branch_rev:
 			else:
 				path = item.path
 
+			h = hashlib.sha1()
+			h.update(obj.data_sha1)
+			h.update(branch.gitattributes_sha1)
+			h.update(item.path.encode())
+
+			sha1 = h.hexdigest()
+			git_sha1 = branch.proj_tree.sha1_map.get(sha1, None)
+			if git_sha1 is not None:
+				obj.git_sha1 = git_sha1
+				continue
+
+			git_sha1 = branch.proj_tree.prev_sha1_map.get(sha1, None)
+			if git_sha1 is not None:
+				branch.proj_tree.sha1_map[sha1] = git_sha1
+				obj.git_sha1 = git_sha1
+				continue
+
 			obj.git_sha1 = branch.hash_object(obj.data,
-								path, self.git_env)
+								path, sha1, self.git_env)
 			continue
 
 		self.staged_tree = self.tree
@@ -870,6 +887,7 @@ class project_branch:
 
 		# Null tree SHA1
 		self.initial_git_tree = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+		self.gitattributes_sha1 = None
 
 		# Full ref name for Git branch or tag for this branch
 		self.refname = branch_map.refname
@@ -916,6 +934,8 @@ class project_branch:
 			self.workdir_seq += 1
 			self.git_env = self.make_git_env()
 
+		h = hashlib.sha1()
+
 		# Check out all .gitattributes files from the injected list and the tree
 		for path, obj in *self.inject_files.items(), *tree:
 			if not obj.is_file() or not path.endswith('.gitattributes'):
@@ -929,7 +949,10 @@ class project_branch:
 			else:
 				Path.mkdir(self.git_working_directory.joinpath(directory), parents=True, exist_ok = True)
 			self.git_working_directory.joinpath(path).write_bytes(obj.data)
+			h.update(b"%s\t%b" % (path.encode(), obj.data_sha1))
 			continue
+
+		self.gitattributes_sha1 = h.digest()
 		return
 
 	## Adds a parent branch, which will serve as the commit's parent.
@@ -1146,10 +1169,12 @@ class project_branch:
 			ignore = self.cfg.ignore_files.fullmatch(path)
 		return ignore
 
-	def hash_object(self, data, path, git_env):
+	def hash_object(self, data, path, sha1, git_env):
 		# git_repo.hash_object will use the current environment from rev_info,
 		# to use the proper .gitattributes worktree
-		return self.git_repo.hash_object_async(data, path, env=git_env)
+		git_sha1 = self.git_repo.hash_object_async(data, path, env=git_env)
+		self.proj_tree.sha1_map[sha1] = git_sha1
+		return git_sha1
 
 	def preprocess_blob_object(self, obj, path):
 		proj_tree = self.proj_tree
@@ -1338,6 +1363,8 @@ class project_history_tree(history_reader):
 		# This path tree is used to detect refname collisions, when a new branch
 		# is created with an already existing ref
 		self.all_refs = path_tree()
+		self.prev_sha1_map = {}
+		self.sha1_map = {}
 		self.deleted_revs = []
 		# authors_map maps revision.author to the author name and email
 		# (name, email) are stored as tuple in the dictionary
@@ -1397,6 +1424,9 @@ class project_history_tree(history_reader):
 			else:
 				refs_list = [project_config.refs_list_match(*refs_list, split=',')]
 			self.load_refs_to_prune(refs_list)
+
+		if options.sha1_map:
+			self.load_sha1_map(options.sha1_map)
 
 		if options.authors_map:
 			self.load_authors_map(options.authors_map)
@@ -1870,6 +1900,9 @@ class project_history_tree(history_reader):
 
 			self.print_unmapped_branches(self.log_file)
 
+			if self.options.sha1_map:
+				self.save_sha1_map(self.options.sha1_map)
+
 		finally:
 			self.shutdown()
 
@@ -1941,6 +1974,24 @@ class project_history_tree(history_reader):
 
 			self.git_repo.queue_update_ref(ref, info.sha1)
 
+		return
+
+	def load_sha1_map(self, filename):
+		try:
+			with open(filename, 'rt', encoding='utf-8') as fd:
+				for line in fd:
+					obj_sha1, _, git_sha1 = line.strip().partition(' ')
+					if obj_sha1 and git_sha1:
+						self.prev_sha1_map[obj_sha1] = git_sha1
+		except FileNotFoundError as fnf:
+			pass
+		return
+
+	def save_sha1_map(self, filename):
+
+		with open(filename, 'wt', encoding='utf-8') as fd:
+			for obj_sha1, git_sha1 in sorted(self.sha1_map.items()):
+				print(obj_sha1, git_sha1, file=fd)
 		return
 
 	def print_unmapped_branches(self, fd):
