@@ -102,6 +102,16 @@
 		</xs:complexType>
 	</xs:element>
 
+	<xs:element name="SkipCommit">
+		<xs:complexType>
+			<xs:all>
+				<xs:element name="Message" type="xs:string" minOccurs="0" maxOccurs="1" />
+			</xs:all>
+			<xs:attribute name="Revs" type="xs:string" use="optional" />
+			<xs:attribute name="RevIds" type="xs:string" use="optional" />
+		</xs:complexType>
+	</xs:element>
+
 	<xs:element name="MapBranch">
 		<xs:complexType>
 			<xs:all>
@@ -168,7 +178,8 @@
 						<xs:attribute name="RevId" type="xs:string" use="required" />
 					</xs:complexType>
 				</xs:element>
-				<xs:element ref="Formatting" />
+				<xs:element ref="Formatting" minOccurs="0" />
+				<xs:element ref="SkipCommit" minOccurs="0" />
 			</xs:choice>
 		</xs:sequence>
 	</xs:group>

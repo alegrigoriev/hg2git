@@ -331,6 +331,9 @@ class hg_changectx_revision:
 		self.convert_hgeol = options.convert_hgeol
 
 		self.children = [child.hex() for child in changectx.children()]
+		# If this revision starts another branch, it cannot be skipped
+		self.need_commit = len(self.children) != 1
+
 		parents = []
 		for parent_changectx in changectx.parents():
 			if parent_changectx.node() != b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00':
@@ -376,6 +379,8 @@ class hg_changectx_revision:
 
 		for tag in changectx.tags():
 			self.create_tag(tag.decode())
+			# If this revision makes a tag, it cannot be skipped
+			self.need_commit = True
 
 		self.extra = changectx.extra().copy()
 		self.extra.pop(b'branch', None)

@@ -570,6 +570,7 @@ class history_revision:
 		self.author = hg_revision.author
 		self.datetime = hg_revision.datetime
 		self.tree = None
+		self.need_commit = hg_revision.need_commit
 		self.rev = hg_revision.rev
 		self.rev_id = hg_revision.rev_id
 		self.prev_rev = prev_revision

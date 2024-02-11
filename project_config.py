@@ -819,6 +819,7 @@ class project_config:
 		self.gitattributes = []
 		self.paths = path_list_match(match_dirs=True)
 		self.edit_msg_list = []
+		self.skip_commit_list = []
 		self.chmod_specifications = []
 		self.refs = refs_list_match()
 		self.format_specifications = []
@@ -859,6 +860,8 @@ class project_config:
 				self.add_ref_map_node(node)
 			elif tag == 'EditMsg':
 				self.edit_msg_list.append(self.process_edit_msg_node(node))
+			elif tag == 'SkipCommit':
+				self.skip_commit_list.append(self.process_skip_commit_node(node))
 			elif tag == 'InjectFile':
 				self.inject_files.append(self.process_injected_file(node))
 			elif tag == 'AddFile':
@@ -1218,6 +1221,38 @@ class project_config:
 				branch=branch,
 				max_sub=max_sub,
 				final=final)
+
+	def process_skip_commit_node(self, skip_commit_node):
+		# attributes: Revs="revision ranges" Max="max substitutions" Final="True"
+		revs = skip_commit_node.get('Revs', '')
+		try:
+			revs = str_to_ranges(revs)
+		except ValueError:
+			raise Exception_cfg_parse(
+				'Invalid Revs specification "%s" in <SkipCommit> specification')
+
+		rev_ids = skip_commit_node.get('RevIds', None)
+		if rev_ids:
+			# Split by whitespaces or by comma optionally surrounded by whitespaces
+			rev_ids = set(re.split(r'\s*,\s*|\s+', rev_ids))
+
+		if not (revs or rev_ids):
+			raise Exception_cfg_parse(
+				'Either Revs="revisions" or RevIds="revision IDs" attribute must be present in <SkipCommit> specification')
+
+		message_node = skip_commit_node.find('./Message')
+		if message_node is not None:
+			message = message_node.text
+			if message is None:
+				# Zero length text is returned as None
+				message = ''
+		else:
+			message = None
+
+		return SimpleNamespace(
+				message=message,
+				revs=revs,
+				rev_ids=rev_ids)
 
 	def add_char_replacement_node(self, node):
 		chars_node = node.find("./Chars")
@@ -1587,6 +1622,7 @@ class project_config:
 					node.tag == 'EditMsg' or \
 					node.tag == 'IgnoreFiles' or \
 					node.tag == 'Formatting' or \
+					node.tag == 'SkipCommit' or \
 					cfg_node.find("./" + node.tag) is None:
 				# The rest of tags are not taken as overrides. They are only appended
 				# if not already present in this config

@@ -119,6 +119,8 @@ class project_branch_rev(async_workitem):
 		# revisions_to_merge is a map of revisions pending to merge, keyed by (branch, index_seq).
 		self.revisions_to_merge = None
 		self.files_staged = 0
+		self.need_commit = False
+		self.skip_commit = None
 		# any_changes_present is set to true if stagelist was not empty
 		self.any_changes_present = False
 		self.staging_base_rev = None
@@ -150,6 +152,15 @@ class project_branch_rev(async_workitem):
 
 		self.rev = revision.rev
 		self.rev_id = revision.rev_id
+		self.need_commit = revision.need_commit
+		for skip_commit in self.branch.cfg.skip_commit_list:
+			if skip_commit.revs and rev_in_ranges(skip_commit.revs, self.rev):
+				self.skip_commit = skip_commit
+				break
+			if skip_commit.rev_ids and self.rev_id in skip_commit.rev_ids:
+				self.skip_commit = skip_commit
+				break
+
 		self.add_revision_props(revision)
 
 		return self
@@ -196,6 +207,21 @@ class project_branch_rev(async_workitem):
 
 		prop0 = props_list[0]
 		msg = prop0.log.copy()
+
+		for prop in props_list[1:]:
+			# Drop repeating and empty paragraphs
+			for paragraph in prop.log:
+				if not paragraph and msg:
+					# drop empty paragraphs
+					continue
+				for prev_paragraph in msg:
+					if prev_paragraph.startswith(paragraph):
+						break
+				else:
+					# No similar paragraph already, can append
+					msg.append(paragraph)
+
+			continue
 
 		if not msg:
 			msg = self.make_change_description(base_rev)
@@ -458,8 +484,11 @@ class project_branch_rev(async_workitem):
 
 				self.set_merged_revision(parent_rev)
 
+				if parent_rev.tree is self.tree and not self.parents:
+					self.any_changes_present = False
 				self.parents.append(parent_rev)
 				self.add_dependency(parent_rev)
+				parent_rev.mark_need_commit()
 				continue
 
 			self.revisions_to_merge = None
@@ -559,6 +588,16 @@ class project_branch_rev(async_workitem):
 
 		metrics = self.tree.get_difference_metrics(source)
 		return metrics.added + metrics.deleted < metrics.identical + metrics.different
+
+	def mark_need_commit(self):
+		if self.need_commit:
+			#already marked
+			return
+
+		self.need_commit = True
+		for rev_info in self.parents[1:]:
+			rev_info.mark_need_commit()
+		return
 
 	def add_tag(self, tag_ref):
 		if self.tags is None:
@@ -1056,6 +1095,8 @@ class project_branch(dependency_node):
 		# If a tag is explicitly unmapped, map_tag returns ""
 		if tag_ref:
 			self.stage.add_tag(tag_ref)
+			# Can't skip a tagged commit
+			self.stage.need_commit = True
 		elif tag_ref is None:
 			print('WARNING: Tag "%s" not mapped to any ref' % (tag,), file=self.proj_tree.log_file)
 		else:
@@ -1103,6 +1144,7 @@ class project_branch(dependency_node):
 
 		parent_commits = []
 		parent_git_tree = self.initial_git_tree
+		prev_git_tree = self.initial_git_tree
 		parent_tree = None
 		commit = None
 
@@ -1119,9 +1161,15 @@ class project_branch(dependency_node):
 							rev_info.branch.name, rev_info.rev), file=rev_info.log_file)
 					rev_info.parents.pop(0)
 
+		need_commit = rev_info.need_commit
+		skip_commit = rev_info.skip_commit
 		base_rev = None
 		for parent_rev in rev_info.parents:
 			if parent_rev.commit is None:
+				if skip_commit is None \
+					and parent_rev.committed_git_tree == parent_rev.branch.initial_git_tree \
+					and rev_info.staged_git_tree != parent_rev.committed_git_tree:
+						need_commit = True
 				continue
 			if parent_rev.commit not in parent_commits:
 				parent_commits.append(parent_rev.commit)
@@ -1130,11 +1178,18 @@ class project_branch(dependency_node):
 
 		if base_rev is not None:
 			parent_git_tree = base_rev.committed_git_tree
+			prev_git_tree = base_rev.staged_git_tree
 			parent_tree = base_rev.committed_tree
 			commit = base_rev.commit
 
-		need_commit = rev_info.staged_git_tree != parent_git_tree
 		if len(parent_commits) > 1:
+			# Creating a merge commit: no skipping
+			need_commit = True
+		# If the tree haven't changed, don't push the commit.
+		elif rev_info.staged_git_tree == parent_git_tree:
+			# No changes
+			need_commit = False
+		elif skip_commit is None:
 			need_commit = True
 
 		if need_commit:
@@ -1160,6 +1215,21 @@ class project_branch(dependency_node):
 			self.proj_tree.commits_made += 1
 		else:
 			self.proj_tree.commits_to_make -= 1
+			# Not making a commit yet, carry things over to the next
+			# Carry the revision properties over to the next commit
+			if skip_commit is not None:
+				if rev_info.staged_git_tree == prev_git_tree:
+					# If there are no changes in the tree for this revision, discard the current revision log
+					rev_info.props_list.pop(-1)
+				# The skipped commit message gets prepended to the next revision,
+				# Replace next revision props
+				elif skip_commit.message is not None:
+					rev_info.props_list[-1].log = log_to_paragraphs(skip_commit.message)
+				elif not rev_info.props_list[-1].log:
+					# If there's no message, discard the current revision props
+					rev_info.props_list.pop(-1)
+				rev_info.next_rev.props_list += rev_info.props_list
+
 			rev_info.committed_git_tree = parent_git_tree
 			rev_info.committed_tree = parent_tree
 
@@ -1309,6 +1379,7 @@ class project_branch(dependency_node):
 			# This also will bail out if branch delete happens twice in a revision
 			return
 
+		self.HEAD.mark_need_commit()
 		self.add_dependency(self.HEAD)
 		self.HEAD.ready()
 		rev_info = self.stage
@@ -1361,6 +1432,7 @@ class project_branch(dependency_node):
 
 	def ready(self):
 		# This node will be executed when the last commit of the branch is done
+		self.HEAD.mark_need_commit()
 
 		self.add_dependency(self.HEAD)
 		self.HEAD.ready()
