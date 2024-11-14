@@ -43,8 +43,10 @@ class base_tree_object:
 	def __init__(self, src = None, properties=None):
 		# object_sha1 is calculated in different way, depending on the object type. This is 'bytes' object.
 		self.object_sha1 = None
+		self.hidden = False
 		# properties of this file or directory
-		if src:
+		if src is not None:
+			self.hidden = src.hidden
 			if properties is not None:
 				self.properties = properties.copy()
 			else:
@@ -113,6 +115,8 @@ class base_tree_object:
 	# all its subelements, properties, and Git attributes
 	def make_object_hash(self, prefix=b'OBJECT\n'):
 		h = hashlib.sha1()
+		if self.hidden:
+			h.update(b'hidden ')
 		h.update(prefix)
 		# The dictionary provides the list in order of adding items
 		# Make sure the properties are hashed in sorted order.
@@ -124,8 +128,19 @@ class base_tree_object:
 
 		return h
 
+	def hide(self, hide=True):
+		if self.hidden == hide:
+			return self
+
+		self = self.copy()
+		self.hidden = hide
+		return self
+
 	def is_finalized(self):
 		return self.object_sha1 is not None
+
+	def is_hidden(self):
+		return self.hidden
 
 	def get_property(self, prop_name, default=None):
 		return self.properties.get(prop_name, default)
@@ -248,6 +263,15 @@ class object_tree(base_tree_object):
 
 		return h
 
+	def hide(self, hide=True):
+		if self.hidden == hide:
+			return self
+
+		self = super().hide(hide)
+		for item in self.items:
+			item.object = item.object.hide(hide)
+		return self
+
 	def set(self, path : str, obj, **kwargs):
 		split = path.partition('/')
 
@@ -271,6 +295,11 @@ class object_tree(base_tree_object):
 
 		if old_item is not None:
 			self.items.remove(old_item)
+
+		if self.hidden and not obj.hidden:
+			# Objects set to a hidden directory become hidden, too
+			obj = obj.hide()
+
 		new_item = self.item(split[0], obj, **kwargs)
 		self.items.append(new_item)
 		self.dict[split[0]] = new_item
@@ -624,7 +653,7 @@ class history_reader:
 
 		if node.action == b'add':
 			# The directory must not currently exist
-			if subtree is not None:
+			if subtree is not None and not subtree.hidden:
 				raise Exception_history_parse('Directory add operation for an already existing directory "%s"' % node.path)
 		elif subtree is None:
 			raise Exception_history_parse('Directory %s operation for a non-existent path "%s"' % (node.action.decode(), node.path))
@@ -633,6 +662,9 @@ class history_reader:
 
 		if node.action == b'delete':
 			return base_tree.delete(node.path)
+
+		if node.action == b'hide':
+			return base_tree.set(node.path, subtree.hide())
 
 		if node.action != b'change':
 			if node.copyfrom_path is None:
@@ -649,6 +681,7 @@ class history_reader:
 					raise Exception_history_parse('Directory copy source "%s" in rev %s is not a directory' % (node.copyfrom_path, copy_source_rev.rev_id))
 
 				subtree = subtree.copy()
+				subtree = subtree.hide(False)
 
 		if node.props is not None:
 			subtree = subtree.set_properties(node.props)
@@ -663,7 +696,7 @@ class history_reader:
 		if file_blob:
 			if not file_blob.is_file():
 				raise Exception_history_parse('File %s target "%s" is not a file' % (node.action.decode(), node.path))
-			if node.action == b'add':
+			if node.action == b'add' and not file_blob.hidden:
 				# The file must not currently exist
 				raise Exception_history_parse('File add operation for an already existing file "%s"' % node.path)
 
@@ -675,6 +708,9 @@ class history_reader:
 		if node.action == b'delete':
 			return base_tree.delete(node.path)
 
+		if node.action == b'hide':
+			return base_tree.set(node.path, file_blob.hide())
+
 		if node.copyfrom_path is not None:
 			copy_source_rev = self.get_revision(node.copyfrom_rev)
 			if copy_source_rev is None:
@@ -685,6 +721,8 @@ class history_reader:
 
 			if not source_file.is_file():
 				raise Exception_history_parse('File copy source "%s;r%s" is not a file' % (node.copyfrom_path, copy_source_rev.rev_id))
+
+			source_file = source_file.hide(False)
 
 		text_content = node.text_content
 
