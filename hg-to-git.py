@@ -26,7 +26,7 @@ os.environ["HGENCODING"] = "UTF-8"
 def main():
 	import argparse
 	parser = argparse.ArgumentParser(description="Convert Mercurial repository to Git", allow_abbrev=False)
-	parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 	parser.add_argument(dest='in_repository', help="Mercurial repository root directory")
 	parser.add_argument("--log", dest='log_file', help="Logfile destination; default to stdout")
 	parser.add_argument("--verbose", "-v", dest='verbose', help="Log verbosity:",
